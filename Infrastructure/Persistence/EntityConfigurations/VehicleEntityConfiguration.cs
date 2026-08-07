@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Domain;
 
@@ -8,13 +8,16 @@ public class VehicleEntityConfiguration : IEntityTypeConfiguration<Vehicle>
 {
     public void Configure(EntityTypeBuilder<Vehicle> builder)
     {
-        builder.ToTable("vehicles");
+        builder.ToTable("vehicles", t =>
+        {
+            t.HasCheckConstraint("CK_vehicles_vin_min_length", "LENGTH(vin) >= 10");
+        });
 
         builder.HasKey(x => x.VehicleId);
 
         builder.Property(x => x.DispatchId).HasColumnName("dispatch_id");
         builder.Property(x => x.VehicleStatus).HasColumnName("vehicle_status").HasConversion<string>();
-        builder.Property(x => x.Vin).HasColumnName("vin");
+        builder.Property(x => x.Vin).HasColumnName("vin").HasMaxLength(15);
         builder.Property(x => x.Year).HasColumnName("year");
         builder.Property(x => x.Make).HasColumnName("make");
         builder.Property(x => x.Model).HasColumnName("model");
