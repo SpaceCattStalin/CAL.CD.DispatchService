@@ -11,6 +11,10 @@ public class Dispatch : BaseEntity
     public DateTime DropoffDate { get; private set; }
     public string? Description { get; private set; }
     public bool IsSigned { get; private set; }
+    public Guid PickupStopId { get; private set; }
+    public Guid DropoffStopId { get; private set; }
+    public Stop PickupStop { get; private set; }
+    public Stop DropoffStop { get; private set; }
     public ICollection<DispatchDriver> Drivers { get; private set; }
     public ICollection<Vehicle> Vehicles { get; private set; }
 }

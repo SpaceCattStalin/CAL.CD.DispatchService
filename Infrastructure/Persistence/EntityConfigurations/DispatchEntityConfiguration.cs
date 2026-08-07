@@ -10,9 +10,6 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
     {
         builder.ToTable("dispatchs", t =>
         {
-            // PickupDate/DropoffDate vs "current date" and the 0<Vehicles<=12 rule depend on
-            // wall-clock time / sibling rows, so they're enforced in the validator/domain layer
-            // instead of as DB check constraints.
             t.HasCheckConstraint("CK_dispatchs_dropoff_after_pickup", "dropoff_date > pickup_date");
         });
 
@@ -25,6 +22,9 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
         builder.Property(x => x.PickupDate).HasColumnName("pickup_date");
         builder.Property(x => x.DropoffDate).HasColumnName("dropoff_date");
         builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(500);
+        builder.Property(x => x.PickupStopId).HasColumnName("pickup_stop_id");
+        builder.Property(x => x.DropoffStopId).HasColumnName("dropoff_stop_id");
+        builder.Property(x => x.IsSigned).HasColumnName("is_signed");
 
         builder.Property(x => x.RecordVersion).HasColumnName("record_version").IsRowVersion();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
@@ -33,5 +33,15 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
         builder.HasMany(x => x.Vehicles)
            .WithOne(v => v.Dispatch)
            .HasForeignKey(x => x.DispatchId);
+
+        builder.HasOne(x => x.PickupStop)
+            .WithMany()
+            .HasForeignKey(x => x.PickupStopId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.DropoffStop)
+            .WithMany()
+            .HasForeignKey(x => x.DropoffStopId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
