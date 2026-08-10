@@ -19,7 +19,7 @@ public class StopEntityConfiguration : IEntityTypeConfiguration<Stop>
 
         builder.HasKey(x => x.StopId);
 
-        builder.Property(x => x.StopNumber).HasColumnName("stop_number").HasConversion<string>();
+        builder.Property(x => x.StopNumber).HasColumnName("stop_number");
         builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(100);
         builder.Property(x => x.LocationName).HasColumnName("location_name").HasMaxLength(30);
         builder.Property(x => x.ContactEmail).HasColumnName("contact_email").HasMaxLength(30);

@@ -8,7 +8,7 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
 {
     public void Configure(EntityTypeBuilder<Dispatch> builder)
     {
-        builder.ToTable("dispatchs", t =>
+        builder.ToTable("dispatches", t =>
         {
             t.HasCheckConstraint("CK_dispatchs_dropoff_after_pickup", "dropoff_date > pickup_date");
         });
