@@ -3,6 +3,7 @@ using System;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260807024939_Update DispatchDrive and Dispatch entity")]
+    partial class UpdateDispatchDriveandDispatchentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -106,21 +109,12 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("dropoff_date");
 
-                    b.Property<Guid>("DropoffStopId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("dropoff_stop_id");
-
                     b.Property<bool>("IsSigned")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_signed");
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("PickupDate")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("pickup_date");
-
-                    b.Property<Guid>("PickupStopId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("pickup_stop_id");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric")
@@ -143,11 +137,7 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasKey("DispatchId");
 
-                    b.HasIndex("DropoffStopId");
-
-                    b.HasIndex("PickupStopId");
-
-                    b.ToTable("dispatches", null, t =>
+                    b.ToTable("dispatchs", null, t =>
                         {
                             t.HasCheckConstraint("CK_dispatchs_dropoff_after_pickup", "dropoff_date > pickup_date");
                         });
@@ -398,25 +388,6 @@ namespace Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_vehicles_vin_min_length", "LENGTH(vin) >= 10");
                         });
-                });
-
-            modelBuilder.Entity("Domain.Dispatch", b =>
-                {
-                    b.HasOne("Domain.Stop", "DropoffStop")
-                        .WithMany()
-                        .HasForeignKey("DropoffStopId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Stop", "PickupStop")
-                        .WithMany()
-                        .HasForeignKey("PickupStopId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("DropoffStop");
-
-                    b.Navigation("PickupStop");
                 });
 
             modelBuilder.Entity("Domain.DispatchDriver", b =>
