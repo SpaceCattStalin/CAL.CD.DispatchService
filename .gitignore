@@ -58,3 +58,7 @@ nunit-*.xml
 
 # Misc
 ref_design_images
+.claude
+notes.txt
+*.md
+!README.md
