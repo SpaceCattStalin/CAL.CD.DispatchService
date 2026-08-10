@@ -17,20 +17,36 @@ public class Vehicle : BaseEntity
     public Stop DropoffStop { get; init; }
 
     /// <summary>
-    /// Private method to create a Vehicle from VehicleInputs
+    /// Factory method to create a Vehicle associated with a Dispatch.
     /// </summary>
-    /// <param name="dispatch">The correlated Dispatch</param>
-    /// <param name="pickupStop">Object of pickup Stop</param>
-    /// <param name="dropoffStop">Object of the dropoff Stop</param>
-    /// <param name="vin"></param>
-    /// <param name="year"></param>
-    /// <param name="make"></param>
-    /// <param name="model"></param>
-    /// <param name="color"></param>
-    /// <returns>A Vehicle object</returns>
+    /// <param name="dispatch">The Dispatch this vehicle belongs to</param>
+    /// <param name="pickupStop">Stop where the vehicle is picked up</param>
+    /// <param name="dropoffStop">Stop where the vehicle is dropped off</param>
+    /// <param name="vin">Vehicle identification number, optional</param>
+    /// <param name="year">Model year of the vehicle</param>
+    /// <param name="make">Manufacturer of the vehicle</param>
+    /// <param name="model">Model name of the vehicle</param>
+    /// <param name="color">Color of the vehicle, optional</param>
+    /// <returns>A new Vehicle instance with status NotSigned</returns>
+    /// <exception cref="ArgumentNullException">dispatch, pickupStop, or dropoffStop is null</exception>
+    /// <exception cref="ArgumentException">make or model is empty</exception>
+    /// <exception cref="ArgumentOutOfRangeException">year is outside the valid range</exception>
     public static Vehicle CreateVehicle(Dispatch dispatch, Stop pickupStop, Stop dropoffStop, string? vin,
     int year, string make, string model, string? color)
     {
+        ArgumentNullException.ThrowIfNull(dispatch);
+        ArgumentNullException.ThrowIfNull(pickupStop);
+        ArgumentNullException.ThrowIfNull(dropoffStop);
+
+        if (string.IsNullOrWhiteSpace(make))
+            throw new ArgumentException("Make is required", nameof(make));
+
+        if (string.IsNullOrWhiteSpace(model))
+            throw new ArgumentException("Model is required", nameof(model));
+
+        if (year < 1900 || year > DateTime.UtcNow.Year + 1)
+            throw new ArgumentOutOfRangeException(nameof(year), year, "Year must be between 1900 and next year");
+
         Vehicle vehicle = new()
         {
             VehicleId = Guid.NewGuid(),

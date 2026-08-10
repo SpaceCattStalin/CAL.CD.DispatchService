@@ -21,9 +21,13 @@ public class Stop : BaseEntity
     /// <param name="contactEmail">Optional contact email at the stop</param>
     /// <returns>A Stop object</returns>
     /// <exception cref="ArgumentException">Address is missing</exception>
+    /// <exception cref="ArgumentOutOfRangeException">StopNumber is not 1 or 2</exception>
     public static Stop Create(int stopNumber, string address, string? locationName,
         string? contactName, string? contactPhone, string? contactEmail)
     {
+        if (stopNumber != 1 && stopNumber != 2)
+            throw new ArgumentOutOfRangeException(nameof(stopNumber), stopNumber, "StopNumber must be 1 (pickup) or 2 (dropoff)");
+            
         if (string.IsNullOrWhiteSpace(address))
             throw new ArgumentException("Address is required", nameof(address));
 

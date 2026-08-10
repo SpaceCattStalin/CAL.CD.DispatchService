@@ -35,7 +35,7 @@ public static class DispatchMapper
             dispatch.IsSigned,
             ToStopResponse(dispatch.PickupStop),
             ToStopResponse(dispatch.DropoffStop),
-            dispatch.Vehicles.Select(ToVehicleResponse),
+            dispatch.Vehicles.Select(x => ToVehicleResponse(x)),
             dispatch.CreatedAt);
     }
 
