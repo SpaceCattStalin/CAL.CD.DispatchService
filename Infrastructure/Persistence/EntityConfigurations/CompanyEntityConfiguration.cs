@@ -17,13 +17,15 @@ public class CompanyEntityConfiguration : IEntityTypeConfiguration<Company>
 
         builder.HasKey(x => x.CompanyId);
 
+        builder.Property(x => x.CompanyId).HasColumnName("company_id");
         builder.Property(x => x.CompanyName).HasColumnName("company_name").HasMaxLength(50);
         builder.Property(x => x.CompanyPhone).HasColumnName("company_phone").HasMaxLength(12);
         builder.Property(x => x.CompanyEmail).HasColumnName("company_email").HasMaxLength(30);
         builder.Property(x => x.CompanyType).HasColumnName("type").HasConversion<string>();
-        builder.Property(x => x.RecordVersion).HasColumnName("record_version").IsRowVersion();
+        builder.Property(x => x.RecordVersion).IsRowVersion();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+    
 
         builder.HasMany(x => x.Users)
             .WithOne(u => u.Company)

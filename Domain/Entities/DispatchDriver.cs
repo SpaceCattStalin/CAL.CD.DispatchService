@@ -1,6 +1,6 @@
 ﻿namespace Domain;
 
-public class DispatchDriver
+public class DispatchDriver : BaseEntity
 {
     public Guid DispatchId { get; init; }
     public Guid DriverId { get; init; }
