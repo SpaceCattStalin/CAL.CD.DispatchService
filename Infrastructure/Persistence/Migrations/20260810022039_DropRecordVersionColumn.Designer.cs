@@ -3,6 +3,7 @@ using System;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260810022039_DropRecordVersionColumn")]
+    partial class DropRecordVersionColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -26,8 +29,7 @@ namespace Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("CompanyId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("company_id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CompanyEmail")
                         .IsRequired()
@@ -82,8 +84,7 @@ namespace Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("DispatchId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("dispatch_id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CarrierId")
                         .HasColumnType("uuid")
@@ -188,8 +189,7 @@ namespace Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("StopId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("stop_id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Address")
                         .IsRequired()
@@ -255,8 +255,7 @@ namespace Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("UserId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid")
@@ -342,8 +341,7 @@ namespace Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("VehicleId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("vehicle_id");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Color")
                         .HasColumnType("text")
