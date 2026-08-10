@@ -15,6 +15,7 @@ public class VehicleEntityConfiguration : IEntityTypeConfiguration<Vehicle>
 
         builder.HasKey(x => x.VehicleId);
 
+        builder.Property(x => x.VehicleId).HasColumnName("vehicle_id");
         builder.Property(x => x.DispatchId).HasColumnName("dispatch_id");
         builder.Property(x => x.VehicleStatus).HasColumnName("vehicle_status").HasConversion<string>();
         builder.Property(x => x.Vin).HasColumnName("vin").HasMaxLength(15);
@@ -25,7 +26,7 @@ public class VehicleEntityConfiguration : IEntityTypeConfiguration<Vehicle>
         builder.Property(x => x.PickupStopId).HasColumnName("pickup_stop_id");
         builder.Property(x => x.DropoffStopId).HasColumnName("dropoff_stop_id");
 
-        builder.Property(x => x.RecordVersion).HasColumnName("record_version").IsRowVersion();
+        builder.Property(x => x.RecordVersion).IsRowVersion();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 

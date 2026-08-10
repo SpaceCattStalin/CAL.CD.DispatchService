@@ -19,6 +19,7 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasKey(x => x.UserId);
 
+        builder.Property(x => x.UserId).HasColumnName("user_id");
         builder.Property(x => x.FirstName).HasColumnName("first_name").HasMaxLength(50);
         builder.Property(x => x.LastName).HasColumnName("last_name").HasMaxLength(50);
         builder.Property(x => x.Phone).HasColumnName("phone").HasMaxLength(12);
@@ -28,7 +29,7 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.UserRole).HasColumnName("role").HasConversion<string>();
         builder.Property(x => x.IsActive).HasColumnName("is_active");
         builder.Property(x => x.CompanyId).HasColumnName("company_id");
-        builder.Property(x => x.RecordVersion).HasColumnName("record_version").IsRowVersion();
+        builder.Property(x => x.RecordVersion).IsRowVersion();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 

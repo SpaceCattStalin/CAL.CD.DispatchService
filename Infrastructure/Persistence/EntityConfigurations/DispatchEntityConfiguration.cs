@@ -15,6 +15,7 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
 
         builder.HasKey(x => x.DispatchId);
 
+        builder.Property(x => x.DispatchId).HasColumnName("dispatch_id");
         builder.Property(x => x.DispatchStatus).HasColumnName("dispatch_status").HasConversion<string>();
         builder.Property(x => x.ShipperId).HasColumnName("shipper_id");
         builder.Property(x => x.CarrierId).HasColumnName("carrier_id");
@@ -26,7 +27,7 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
         builder.Property(x => x.DropoffStopId).HasColumnName("dropoff_stop_id");
         builder.Property(x => x.IsSigned).HasColumnName("is_signed");
 
-        builder.Property(x => x.RecordVersion).HasColumnName("record_version").IsRowVersion();
+        builder.Property(x => x.RecordVersion).IsRowVersion();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 

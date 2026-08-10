@@ -15,6 +15,9 @@ public class DispatchDriverEntityConfiguration : IEntityTypeConfiguration<Dispat
         builder.Property(x => x.DispatchId).HasColumnName("dispatch_id");
         builder.Property(x => x.DriverId).HasColumnName("driver_id");
 
+        builder.Property(x => x.RecordVersion).IsRowVersion();
+        builder.Property(x => x.CreatedAt).HasColumnName("created_at");
+        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
 
         builder.HasOne(x => x.Dispatch)
             .WithMany(x => x.Drivers)
