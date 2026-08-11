@@ -44,7 +44,7 @@ public class DispatchServiceTests
     {
         mockDb.Setup(db => db.Dispatches).Returns(mockSet.Object);
         mockDb.Setup(db => db.SaveChangesAsync(default)).ReturnsAsync(1);
-        mockCurrentUser.Setup(u => u.ShipperId).Returns(defaultShipperId);
+        mockCurrentUser.Setup(u => u.UserId).Returns(defaultShipperId);
         return new DispatchService(mockDb.Object, mockValidator.Object, mockCurrentUser.Object);
     }
 

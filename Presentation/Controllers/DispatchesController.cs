@@ -1,4 +1,6 @@
+using Application;
 using Application.Dispatches;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Presentation.Controllers;
@@ -15,7 +17,7 @@ public class DispatchesController : ControllerBase
     }
 
     [HttpPost]
-    // TODO: [Authorize(Roles = "Owner")] once authentication is implemented
+    [Authorize(Policy = PermissionNames.DispatchesCreate)]
     public async Task<IActionResult> Create(CreateDispatchRequest request)
     {
         var response = await _dispatchService.CreateAsync(request);
