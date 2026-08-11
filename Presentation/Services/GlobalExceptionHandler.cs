@@ -33,7 +33,14 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     group => group.Select(element => element.ErrorMessage).ToArray()
                 );
 
-            problem = new ValidationProblemDetails(errors);
+            problem = new ValidationProblemDetails
+            {
+                Status = 400,
+                Title = "Validation Error",
+                Type = exception.GetType().Name,
+                Errors = errors,
+                Instance = httpContext.Request.Path
+            };
         }
         else
         {
