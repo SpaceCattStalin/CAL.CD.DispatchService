@@ -5,7 +5,7 @@ namespace Application.UnitTests.Domain;
 public class StopTests
 {
     private const string address = "123 Main Street, Xo Viet Nghe Tinh";
-    private const string locationName = "Phuong 27";
+    private const string locationName = "Phuong So 27";
     private const string contactName = "John Overwatch";
     private const string contactPhone = "555-123-4567";
     private const string contactEmail = "john@example.com";
@@ -79,6 +79,106 @@ public class StopTests
     public void CreateStop_InvalidStopNumber_ThrowsArgumentException(int stopNumber)
     {
         Action action = () => Stop.Create(stopNumber, address, locationName, contactName, contactPhone, contactEmail);
+
+        Assert.Throws<ArgumentOutOfRangeException>(action);
+    }
+
+    [Theory]
+    [InlineData(20)]
+    [InlineData(100)]
+    public void CreateStop_AddressLengthWithinRange_DoesNotThrow(int length)
+    {
+        var stop = Stop.Create(1, new string('a', length), locationName, contactName, contactPhone, contactEmail);
+
+        Assert.Equal(length, stop.Address.Length);
+    }
+
+    [Theory]
+    [InlineData(19)]
+    [InlineData(101)]
+    public void CreateStop_AddressLengthOutOfRange_ThrowsArgumentOutOfRangeException(int length)
+    {
+        Action action = () => Stop.Create(1, new string('a', length), locationName, contactName, contactPhone, contactEmail);
+
+        Assert.Throws<ArgumentOutOfRangeException>(action);
+    }
+
+    [Theory]
+    [InlineData(10)]
+    [InlineData(30)]
+    public void CreateStop_LocationNameLengthWithinRange_DoesNotThrow(int length)
+    {
+        var stop = Stop.Create(1, address, new string('a', length), contactName, contactPhone, contactEmail);
+
+        Assert.Equal(length, stop.LocationName!.Length);
+    }
+
+    [Theory]
+    [InlineData(9)]
+    [InlineData(31)]
+    public void CreateStop_LocationNameLengthOutOfRange_ThrowsArgumentOutOfRangeException(int length)
+    {
+        Action action = () => Stop.Create(1, address, new string('a', length), contactName, contactPhone, contactEmail);
+
+        Assert.Throws<ArgumentOutOfRangeException>(action);
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(50)]
+    public void CreateStop_ContactNameLengthWithinRange_DoesNotThrow(int length)
+    {
+        var stop = Stop.Create(1, address, locationName, new string('a', length), contactPhone, contactEmail);
+
+        Assert.Equal(length, stop.ContactName!.Length);
+    }
+
+    [Theory]
+    [InlineData(4)]
+    [InlineData(51)]
+    public void CreateStop_ContactNameLengthOutOfRange_ThrowsArgumentOutOfRangeException(int length)
+    {
+        Action action = () => Stop.Create(1, address, locationName, new string('a', length), contactPhone, contactEmail);
+
+        Assert.Throws<ArgumentOutOfRangeException>(action);
+    }
+
+    [Theory]
+    [InlineData(10)]
+    [InlineData(12)]
+    public void CreateStop_ContactPhoneLengthWithinRange_DoesNotThrow(int length)
+    {
+        var stop = Stop.Create(1, address, locationName, contactName, new string('1', length), contactEmail);
+
+        Assert.Equal(length, stop.ContactPhone!.Length);
+    }
+
+    [Theory]
+    [InlineData(9)]
+    [InlineData(13)]
+    public void CreateStop_ContactPhoneLengthOutOfRange_ThrowsArgumentOutOfRangeException(int length)
+    {
+        Action action = () => Stop.Create(1, address, locationName, contactName, new string('1', length), contactEmail);
+
+        Assert.Throws<ArgumentOutOfRangeException>(action);
+    }
+
+    [Theory]
+    [InlineData(15)]
+    [InlineData(30)]
+    public void CreateStop_ContactEmailLengthWithinRange_DoesNotThrow(int length)
+    {
+        var stop = Stop.Create(1, address, locationName, contactName, contactPhone, new string('a', length));
+
+        Assert.Equal(length, stop.ContactEmail!.Length);
+    }
+
+    [Theory]
+    [InlineData(14)]
+    [InlineData(31)]
+    public void CreateStop_ContactEmailLengthOutOfRange_ThrowsArgumentOutOfRangeException(int length)
+    {
+        Action action = () => Stop.Create(1, address, locationName, contactName, contactPhone, new string('a', length));
 
         Assert.Throws<ArgumentOutOfRangeException>(action);
     }

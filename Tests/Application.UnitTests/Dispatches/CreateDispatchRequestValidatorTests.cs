@@ -13,14 +13,14 @@ public class CreateDispatchRequestValidatorTests
         "Testing",
         new StopRequest(
             "123 Main Street, Xo Viet Nghe Tinh",
-            "Phuong 27",
+            "Phuong So 27",
             "John Overwatch",
             "555-123-4567",
             "john@example.com"
         ),
         new StopRequest(
             "123 Main Street, Le Van Viet",
-            "Phuong 27",
+            "Phuong So 27",
             "John Valorant",
             "555-123-4589",
             "johnny@example.com"

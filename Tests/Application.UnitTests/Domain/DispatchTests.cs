@@ -14,14 +14,14 @@ public class DispatchTests
     private static readonly Stop pickupStop = Stop.Create(
         1,
         "123 Main Street, Xo Viet Nghe Tinh",
-        "Phuong 27",
+        "Phuong So 27",
         "John Overwatch",
         "555-123-4567",
         "john@example.com");
     private static readonly Stop dropoffStop = Stop.Create(
         2,
         "123 Main Street, Le Van Viet",
-        "Phuong 27",
+        "Phuong So 27",
         "John Valorant",
         "555-123-4589",
         "johnny@example.com");
@@ -142,8 +142,8 @@ public class DispatchTests
     [Fact]
     public void Create_ValidInputs_AllVehiclesShareDispatchStops()
     {
-        var pickup = Stop.Create(1, "123 Main St", null, null, null, null);
-        var dropoff = Stop.Create(2, "456 Oak Ave", null, null, null, null);
+        var pickup = Stop.Create(1, "123 Main Street, Springfield", null, null, null, null);
+        var dropoff = Stop.Create(2, "456 Oak Avenue, Springfield", null, null, null, null);
         var dispatch = Dispatch.Create(shipperId, carrierId, price, pickupDate, dropoffDate,
             description, pickup, dropoff, MakeVehicleInputs(count: 3));
 

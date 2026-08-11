@@ -1,6 +1,4 @@
-﻿using System.Data;
-using Domain;
-using FluentValidation;
+﻿using FluentValidation;
 namespace Application.Dispatches;
 
 public class CreateDispatchRequestValidator : AbstractValidator<CreateDispatchRequest>
@@ -14,6 +12,8 @@ public class CreateDispatchRequestValidator : AbstractValidator<CreateDispatchRe
         RuleFor(x => x.DropoffDate)
             .GreaterThan(DateTime.UtcNow)
             .GreaterThan(x => x.PickupDate);
+        RuleFor(x => x.PickupStop).SetValidator(new StopRequestValidator());
+        RuleFor(x => x.DropoffStop).SetValidator(new StopRequestValidator());
         RuleFor(x => x.Description).MaximumLength(500);
         RuleFor(x => x.Vehicles)
             .Must(x => x.Count() >= 1 && x.Count() <= 12)

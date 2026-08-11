@@ -15,6 +15,7 @@ public class StopEntityConfiguration : IEntityTypeConfiguration<Stop>
             t.HasCheckConstraint("CK_stops_contact_name_min_length", "LENGTH(contact_name) >= 5");
             t.HasCheckConstraint("CK_stops_contact_phone_min_length", "LENGTH(contact_phone) >= 10");
             t.HasCheckConstraint("CK_stops_contact_email_min_length", "LENGTH(contact_email) >= 15");
+            t.HasCheckConstraint("CK_stops_number_valid", "stop_number IN (1, 2)");
         });
  
         builder.HasKey(x => x.StopId);
