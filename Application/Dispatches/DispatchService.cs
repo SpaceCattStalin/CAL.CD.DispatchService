@@ -22,7 +22,7 @@ public class DispatchService
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
 
-        var dispatch = DispatchMapper.ToDomain(request, _currentUser.ShipperId);
+        var dispatch = DispatchMapper.ToDomain(request, _currentUser.UserId);
 
         _db.Dispatches.Add(dispatch);
         await _db.SaveChangesAsync();
