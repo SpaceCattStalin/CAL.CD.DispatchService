@@ -1,4 +1,5 @@
 using Application;
+using Domain;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,17 +10,20 @@ public class DispatchService
     private readonly IApplicationDbContext _db;
     private readonly IValidator<CreateDispatchRequest> _validator;
     private readonly IValidator<GetDispatchBatchRequest> _batchValidator;
+    private readonly IValidator<AssignDriverRequest> _assignDriverValidator;
     private readonly ICurrentUserService _currentUser;
 
     public DispatchService(
         IApplicationDbContext db,
         IValidator<CreateDispatchRequest> validator,
         IValidator<GetDispatchBatchRequest> batchValidator,
+        IValidator<AssignDriverRequest> assignDriverValidator,
         ICurrentUserService currentUser)
     {
         _db = db;
         _validator = validator;
         _batchValidator = batchValidator;
+        _assignDriverValidator = assignDriverValidator;
         _currentUser = currentUser;
     }
 
@@ -85,5 +89,38 @@ public class DispatchService
         return new GetDispatchBatchResponse(
             dispatches.Select(DispatchMapper.ToDispatchResponse),
             notFound);
+    }
+
+    // TODO: unit tests deferred - same InMemory/User-construction blockers as GetByIdAsync.
+    public async Task AssignDriverAsync(Guid dispatchId, AssignDriverRequest request)
+    {
+        var result = await _assignDriverValidator.ValidateAsync(request);
+        if (!result.IsValid)
+            throw new ValidationException(result.Errors);
+
+        var dispatch = await _db.Dispatches
+            .Include(d => d.Drivers)
+            .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
+
+        if (dispatch is null)
+            throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
+
+        if (dispatch.CarrierId == Guid.Empty)
+            throw new ArgumentException("Dispatch does not have a carrier assigned.", nameof(dispatchId));
+
+        var driver = await _db.Users.FirstOrDefaultAsync(u => u.UserId == request.DriverId);
+        if (driver is null || !driver.IsActive)
+            throw new ArgumentException("DriverId does not reference an active driver.", nameof(request.DriverId));
+
+        var alreadyAssigned = dispatch.Drivers.Any(dd => dd.DriverId == request.DriverId);
+        if (alreadyAssigned)
+            return;
+
+        dispatch.Drivers.Add(new DispatchDriver
+        {
+            DispatchId = dispatch.DispatchId,
+            DriverId = driver.UserId
+        });
+        await _db.SaveChangesAsync();
     }
 }

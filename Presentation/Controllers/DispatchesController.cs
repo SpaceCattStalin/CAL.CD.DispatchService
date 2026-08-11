@@ -39,4 +39,12 @@ public class DispatchesController : ControllerBase
         var response = await _dispatchService.GetBatchAsync(request);
         return Ok(response);
     }
+
+    [HttpPost("{dispatchId}/assign-driver")]
+    [Authorize(Policy = PermissionNames.DispatchesUpdate)]
+    public async Task<IActionResult> AssignDriver(Guid dispatchId, AssignDriverRequest request)
+    {
+        await _dispatchService.AssignDriverAsync(dispatchId, request);
+        return NoContent();
+    }
 }

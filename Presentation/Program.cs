@@ -33,6 +33,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddScoped<IValidator<CreateDispatchRequest>, CreateDispatchRequestValidator>();
 builder.Services.AddScoped<IValidator<GetDispatchBatchRequest>, GetDispatchBatchRequestValidator>();
+builder.Services.AddScoped<IValidator<AssignDriverRequest>, AssignDriverRequestValidator>();
 builder.Services.AddScoped<DispatchService>();
 
 builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>();
