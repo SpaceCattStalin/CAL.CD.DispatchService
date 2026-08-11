@@ -23,4 +23,20 @@ public class DispatchesController : ControllerBase
         var response = await _dispatchService.CreateAsync(request);
         return Created($"/dispatch/{response.DispatchId}", response);
     }
+
+    [HttpGet("{dispatchId}")]
+    [Authorize(Policy = PermissionNames.DispatchesRead)]
+    public async Task<IActionResult> GetById(Guid dispatchId)
+    {
+        var response = await _dispatchService.GetByIdAsync(dispatchId);
+        return Ok(response);
+    }
+
+    [HttpPost("batch/get")]
+    [Authorize(Policy = PermissionNames.DispatchesRead)]
+    public async Task<IActionResult> GetBatch(GetDispatchBatchRequest request)
+    {
+        var response = await _dispatchService.GetBatchAsync(request);
+        return Ok(response);
+    }
 }
