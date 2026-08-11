@@ -18,6 +18,6 @@ public class StopRequestValidator : AbstractValidator<StopRequest>
         RuleFor(x => x.ContactEmail)
             .Length(15, 30)
         // Only check for the presence of "@". Reference: following the EmailAddress() function documentation
-        .EmailAddress();
+            .EmailAddress();
     }
 }
