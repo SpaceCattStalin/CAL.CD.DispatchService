@@ -30,5 +30,16 @@ public class CompanyEntityConfiguration : IEntityTypeConfiguration<Company>
         builder.HasMany(x => x.Users)
             .WithOne(u => u.Company)
             .HasForeignKey(u => u.CompanyId);
+
+        builder.HasData(new
+        {
+            CompanyId = TestUserSeedIds.CompanyId,
+            CompanyName = "Test Logistics Co",
+            CompanyPhone = "1234567890",
+            CompanyEmail = "contact@testlogistics.com",
+            CompanyType = CompanyType.Shipper,
+            CreatedAt = TestUserSeedIds.SeedTimestamp,
+            UpdatedAt = TestUserSeedIds.SeedTimestamp
+        });
     }
 }

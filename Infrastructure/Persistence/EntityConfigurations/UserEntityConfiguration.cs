@@ -36,5 +36,21 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
         builder.HasOne(x => x.Company)
             .WithMany(c => c.Users)
             .HasForeignKey(x => x.CompanyId);
+
+        builder.HasData(new
+        {
+            UserId = TestUserSeedIds.UserId,
+            FirstName = "Tester",
+            LastName = "Owner",
+            Phone = "1234567890",
+            Email = "owner@testlogistics.com",
+            UserName = "testowner",
+            PasswordHash = TestUserSeedIds.PasswordHash,
+            UserRole = UserRole.Owner,
+            IsActive = true,
+            CompanyId = TestUserSeedIds.CompanyId,
+            CreatedAt = TestUserSeedIds.SeedTimestamp,
+            UpdatedAt = TestUserSeedIds.SeedTimestamp
+        });
     }
 }
