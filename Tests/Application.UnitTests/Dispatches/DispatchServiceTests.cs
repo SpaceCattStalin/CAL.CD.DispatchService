@@ -37,6 +37,7 @@ public class DispatchServiceTests
 
     private readonly Mock<IValidator<CreateDispatchRequest>> mockValidator = new();
     private readonly Mock<IValidator<GetDispatchBatchRequest>> mockBatchValidator = new();
+    private readonly Mock<IValidator<AssignDriverRequest>> mockAssignDriverValidator = new();
     private readonly Mock<ICurrentUserService> mockCurrentUser = new();
     private readonly Mock<DbSet<Dispatch>> mockSet = new();
     private readonly Mock<IApplicationDbContext> mockDb = new();
@@ -46,7 +47,7 @@ public class DispatchServiceTests
         mockDb.Setup(db => db.Dispatches).Returns(mockSet.Object);
         mockDb.Setup(db => db.SaveChangesAsync(default)).ReturnsAsync(1);
         mockCurrentUser.Setup(u => u.UserId).Returns(defaultShipperId);
-        return new DispatchService(mockDb.Object, mockValidator.Object, mockBatchValidator.Object, mockCurrentUser.Object);
+        return new DispatchService(mockDb.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockCurrentUser.Object);
     }
 
     [Fact]
