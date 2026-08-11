@@ -64,6 +64,35 @@ public static class DispatchMapper
             ToStopResponse(vehicle.PickupStop),
             ToStopResponse(vehicle.DropoffStop));
     }
+
+    public static DispatchResponse ToDispatchResponse(Dispatch dispatch)
+    {
+        return new DispatchResponse(
+            dispatch.DispatchId,
+            dispatch.ShipperId,
+            dispatch.CarrierId,
+            dispatch.DispatchStatus.ToString(),
+            dispatch.Price,
+            dispatch.PickupDate,
+            dispatch.DropoffDate,
+            dispatch.Description,
+            dispatch.IsSigned,
+            ToStopResponse(dispatch.PickupStop),
+            ToStopResponse(dispatch.DropoffStop),
+            dispatch.Vehicles.Select(x => ToVehicleResponse(x)),
+            dispatch.Drivers.Select(dd => ToDriverResponse(dd.Driver)),
+            dispatch.CreatedAt);
+    }
+
+    private static DriverResponse ToDriverResponse(User driver)
+    {
+        return new DriverResponse(
+            driver.UserId,
+            driver.FirstName,
+            driver.LastName,
+            driver.Phone,
+            driver.Email);
+    }
 }
 
 

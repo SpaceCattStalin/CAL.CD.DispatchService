@@ -36,6 +36,7 @@ public class DispatchServiceTests
         new(new[] { new ValidationFailure("CarrierId", "CarrierId is required") });
 
     private readonly Mock<IValidator<CreateDispatchRequest>> mockValidator = new();
+    private readonly Mock<IValidator<GetDispatchBatchRequest>> mockBatchValidator = new();
     private readonly Mock<ICurrentUserService> mockCurrentUser = new();
     private readonly Mock<DbSet<Dispatch>> mockSet = new();
     private readonly Mock<IApplicationDbContext> mockDb = new();
@@ -45,7 +46,7 @@ public class DispatchServiceTests
         mockDb.Setup(db => db.Dispatches).Returns(mockSet.Object);
         mockDb.Setup(db => db.SaveChangesAsync(default)).ReturnsAsync(1);
         mockCurrentUser.Setup(u => u.UserId).Returns(defaultShipperId);
-        return new DispatchService(mockDb.Object, mockValidator.Object, mockCurrentUser.Object);
+        return new DispatchService(mockDb.Object, mockValidator.Object, mockBatchValidator.Object, mockCurrentUser.Object);
     }
 
     [Fact]
