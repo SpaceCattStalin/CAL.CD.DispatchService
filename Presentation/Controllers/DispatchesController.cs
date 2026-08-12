@@ -55,4 +55,12 @@ public class DispatchesController : ControllerBase
         await _dispatchService.DeleteAsync(dispatchId);
         return NoContent();
     }
+
+    [HttpPut("{dispatchId}")]
+    [Authorize(Policy = PermissionNames.DispatchesUpdate)]
+    public async Task<IActionResult> Update(Guid dispatchId, UpdateDispatchRequest request)
+    {
+        var response = await _dispatchService.UpdateAsync(dispatchId, request);
+        return Ok(response);
+    }
 }

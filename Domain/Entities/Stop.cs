@@ -58,4 +58,37 @@ public class Stop : BaseEntity
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    /// <summary>
+    /// Update this Stop's editable fields. StopNumber is fixed and cannot be changed.
+    /// </summary>
+    /// <exception cref="ArgumentException">Address is missing</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A field's length is out of range</exception>
+    public void UpdateDetails(string address, string? locationName,
+        string? contactName, string? contactPhone, string? contactEmail)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+            throw new ArgumentException("Address is required", nameof(address));
+
+        if (address.Length < 20 || address.Length > 100)
+            throw new ArgumentOutOfRangeException(nameof(address), address, "Address must be between 20 and 100 characters");
+
+        if (locationName is not null && (locationName.Length < 10 || locationName.Length > 30))
+            throw new ArgumentOutOfRangeException(nameof(locationName), locationName, "LocationName must be between 10 and 30 characters");
+
+        if (contactName is not null && (contactName.Length < 5 || contactName.Length > 50))
+            throw new ArgumentOutOfRangeException(nameof(contactName), contactName, "ContactName must be between 5 and 50 characters");
+
+        if (contactPhone is not null && (contactPhone.Length < 10 || contactPhone.Length > 12))
+            throw new ArgumentOutOfRangeException(nameof(contactPhone), contactPhone, "ContactPhone must be between 10 and 12 characters");
+
+        if (contactEmail is not null && (contactEmail.Length < 15 || contactEmail.Length > 30))
+            throw new ArgumentOutOfRangeException(nameof(contactEmail), contactEmail, "ContactEmail must be between 15 and 30 characters");
+
+        Address = address;
+        LocationName = locationName;
+        ContactName = contactName;
+        ContactPhone = contactPhone;
+        ContactEmail = contactEmail;
+    }
 }

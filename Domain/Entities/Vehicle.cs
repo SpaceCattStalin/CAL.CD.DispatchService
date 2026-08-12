@@ -7,11 +7,11 @@ public class Vehicle : BaseEntity
     public Guid PickupStopId { get; init; }
     public Guid DropoffStopId { get; init; }
     public VehicleStatus VehicleStatus { get; private set; }
-    public string? Vin { get; init; }
+    public string? Vin { get; private set; }
     public int Year { get; init; }
     public string Make { get; init; }
     public string Model { get; init; }
-    public string? Color { get; init; }
+    public string? Color { get; private set; }
     public Dispatch Dispatch { get; init; }
     public Stop PickupStop { get; init; }
     public Stop DropoffStop { get; init; }
@@ -74,5 +74,15 @@ public class Vehicle : BaseEntity
     public void UpdateStatus(VehicleStatus status)
     {
         VehicleStatus = status;
+    }
+
+    /// <summary>
+    /// Update this Vehicle's editable fields. Vin and Color are the only editable fields;
+    /// Year, Make, and Model are fixed at creation.
+    /// </summary>
+    public void UpdateDetails(string? vin, string? color)
+    {
+        Vin = vin;
+        Color = color;
     }
 }

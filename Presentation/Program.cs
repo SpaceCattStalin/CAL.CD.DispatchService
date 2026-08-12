@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using Presentation;
 using Presentation.Services;
 
@@ -18,7 +19,24 @@ Env.Load(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the raw JWT from POST /auth/login (no 'Bearer ' prefix -- Swagger adds that automatically)."
+    });
+
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        { new OpenApiSecuritySchemeReference("Bearer", document), new List<string>() }
+    });
+});
+
 builder.Services.AddControllers();
 
 var connectionString = builder.Configuration.GetConnectionString("DbConnection") ?? throw new InvalidOperationException("Connection string was not found."); ;
@@ -34,6 +52,7 @@ builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddScoped<IValidator<CreateDispatchRequest>, CreateDispatchRequestValidator>();
 builder.Services.AddScoped<IValidator<GetDispatchBatchRequest>, GetDispatchBatchRequestValidator>();
 builder.Services.AddScoped<IValidator<AssignDriverRequest>, AssignDriverRequestValidator>();
+builder.Services.AddScoped<IValidator<UpdateDispatchRequest>, UpdateDispatchRequestValidator>();
 builder.Services.AddScoped<DispatchService>();
 
 builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>();
