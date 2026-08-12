@@ -67,4 +67,12 @@ public class Vehicle : BaseEntity
 
         return vehicle;
     }
+    /// <summary>
+    /// Update a Vehicle status
+    /// </summary>
+    /// <param name="status">Vehicle status to update</param>
+    public void UpdateStatus(VehicleStatus status)
+    {
+        VehicleStatus = status;
+    }
 }

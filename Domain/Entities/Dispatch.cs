@@ -75,7 +75,6 @@ public class Dispatch : BaseEntity
             PickupStop = pickupStop,
             DropoffStop = dropoffStop,
             Description = description,
-            DispatchStatus = DispatchStatus.NotSigned,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -85,18 +84,55 @@ public class Dispatch : BaseEntity
                 vehicleInput.Vin, vehicleInput.Year, vehicleInput.Make, vehicleInput.Model, vehicleInput.Color);
             dispatch.Vehicles.Add(vehicle);
         }
+        
+        dispatch.UpdateStatus(DispatchStatus.NotSigned);
 
         return dispatch;
     }
+    /// <summary>
+    /// Update Dispatch stauts
+    /// </summary>
+    /// <param name="status">The Dispatch status to update</param>
+    public void UpdateStatus(DispatchStatus status)
+    {
+        DispatchStatus = status;
+        switch (status)
+        {
+            case DispatchStatus.PendingDelivery:
+                foreach (var vehicle in Vehicles)
+                    vehicle.UpdateStatus(VehicleStatus.PendingDelivery);
+                break;
 
+            case DispatchStatus.PendingPickup:
+                foreach (var vehicle in Vehicles)
+                    vehicle.UpdateStatus(VehicleStatus.PreparingForShipment);
+                break;
+
+            case DispatchStatus.Delivered:
+                foreach (var vehicle in Vehicles)
+                    vehicle.UpdateStatus(VehicleStatus.Delivered);
+                break;
+
+            case DispatchStatus.Canceled:
+                foreach (var vehicle in Vehicles)
+                    vehicle.UpdateStatus(VehicleStatus.Canceled);
+                break;
+
+            case DispatchStatus.NotSigned:
+                foreach (var vehicle in Vehicles)
+                    vehicle.UpdateStatus(VehicleStatus.NotSigned);
+                break;
+        }
+    }
     public void Cancel()
     {
+        UpdateStatus(DispatchStatus.Canceled);
+
         Vehicles.Clear();
         Drivers.Clear();
         PickupStop = null;
         PickupStopId = null;
         DropoffStop = null;
         DropoffStopId = null;
-        DispatchStatus = DispatchStatus.Canceled;
     }
 }
