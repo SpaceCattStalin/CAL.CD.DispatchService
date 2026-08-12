@@ -10,7 +10,7 @@ public record CreateDispatchResponse(
     DateTime DropoffDate,
     string? Description,
     bool IsSigned,
-    StopResponse PickupStop,
-    StopResponse DropoffStop,
+    StopResponse? PickupStop,
+    StopResponse? DropoffStop,
     IEnumerable<VehicleResponse> Vehicles,
     DateTime CreatedAt);

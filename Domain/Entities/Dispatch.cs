@@ -11,10 +11,10 @@ public class Dispatch : BaseEntity
     public DateTime DropoffDate { get; private set; }
     public string? Description { get; private set; }
     public bool IsSigned { get; private set; }
-    public Guid PickupStopId { get; private set; }
-    public Guid DropoffStopId { get; private set; }
-    public Stop PickupStop { get; private set; }
-    public Stop DropoffStop { get; private set; }
+    public Guid? PickupStopId { get; private set; }
+    public Guid? DropoffStopId { get; private set; }
+    public Stop? PickupStop { get; private set; }
+    public Stop? DropoffStop { get; private set; }
     public ICollection<DispatchDriver> Drivers { get; private set; } = new List<DispatchDriver>();
     public ICollection<Vehicle> Vehicles { get; private set; } = new List<Vehicle>();
 
@@ -87,5 +87,16 @@ public class Dispatch : BaseEntity
         }
 
         return dispatch;
+    }
+
+    public void Cancel()
+    {
+        Vehicles.Clear();
+        Drivers.Clear();
+        PickupStop = null;
+        PickupStopId = null;
+        DropoffStop = null;
+        DropoffStopId = null;
+        DispatchStatus = DispatchStatus.Canceled;
     }
 }

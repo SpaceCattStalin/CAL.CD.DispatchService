@@ -39,8 +39,11 @@ public static class DispatchMapper
             dispatch.CreatedAt);
     }
 
-    private static StopResponse ToStopResponse(Stop stop)
+    private static StopResponse? ToStopResponse(Stop? stop)
     {
+        if (stop is null)
+            return null;
+
         return new StopResponse(
             stop.StopId,
             stop.StopNumber.ToString(),
@@ -61,8 +64,8 @@ public static class DispatchMapper
             vehicle.Make,
             vehicle.Model,
             vehicle.Color,
-            ToStopResponse(vehicle.PickupStop),
-            ToStopResponse(vehicle.DropoffStop));
+            ToStopResponse(vehicle.PickupStop)!,
+            ToStopResponse(vehicle.DropoffStop)!);
     }
 
     public static DispatchResponse ToDispatchResponse(Dispatch dispatch)

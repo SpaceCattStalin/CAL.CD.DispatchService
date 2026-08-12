@@ -53,9 +53,9 @@ public class DispatchMapperTests
         Assert.Equal(request.PickupDate, dispatch.PickupDate);
         Assert.Equal(request.DropoffDate, dispatch.DropoffDate);
         Assert.Equal(request.Description, dispatch.Description);
-        Assert.Equal(1, dispatch.PickupStop.StopNumber);
+        Assert.Equal(1, dispatch.PickupStop!.StopNumber);
         Assert.Equal(request.PickupStop.Address, dispatch.PickupStop.Address);
-        Assert.Equal(2, dispatch.DropoffStop.StopNumber);
+        Assert.Equal(2, dispatch.DropoffStop!.StopNumber);
         Assert.Equal(request.DropoffStop.Address, dispatch.DropoffStop.Address);
     }
 
@@ -133,10 +133,10 @@ public class DispatchMapperTests
 
         var response = DispatchMapper.ToResponse(dispatch);
 
-        Assert.Equal(dispatch.PickupStop.StopId, response.PickupStop.StopId);
+        Assert.Equal(dispatch.PickupStop!.StopId, response.PickupStop!.StopId);
         Assert.Equal("1", response.PickupStop.StopNumber);
         Assert.Equal(dispatch.PickupStop.Address, response.PickupStop.Address);
-        Assert.Equal(dispatch.DropoffStop.StopId, response.DropoffStop.StopId);
+        Assert.Equal(dispatch.DropoffStop!.StopId, response.DropoffStop!.StopId);
         Assert.Equal("2", response.DropoffStop.StopNumber);
         Assert.Equal(dispatch.DropoffStop.Address, response.DropoffStop.Address);
     }
