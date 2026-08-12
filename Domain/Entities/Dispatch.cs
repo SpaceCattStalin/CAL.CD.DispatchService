@@ -89,6 +89,10 @@ public class Dispatch : BaseEntity
         return dispatch;
     }
 
+    public void UpdateStatus(DispatchStatus status)
+    {
+        DispatchStatus = status;
+    }
     public void Cancel()
     {
         Vehicles.Clear();

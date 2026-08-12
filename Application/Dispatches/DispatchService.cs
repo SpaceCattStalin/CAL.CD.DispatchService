@@ -109,6 +109,8 @@ public class DispatchService
         if (dispatch.CarrierId == Guid.Empty)
             throw new ArgumentException("Dispatch does not have a carrier assigned.", nameof(dispatchId));
 
+        dispatch.UpdateStatus(DispatchStatus.PendingDelivery);
+
         var driver = await _db.Users.FirstOrDefaultAsync(u => u.UserId == request.DriverId);
         if (driver is null || !driver.IsActive)
             throw new ArgumentException("DriverId does not reference an active driver.", nameof(request.DriverId));
