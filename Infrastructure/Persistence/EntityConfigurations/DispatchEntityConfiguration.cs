@@ -38,11 +38,11 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
         builder.HasOne(x => x.PickupStop)
             .WithMany()
             .HasForeignKey(x => x.PickupStopId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasOne(x => x.DropoffStop)
             .WithMany()
             .HasForeignKey(x => x.DropoffStopId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

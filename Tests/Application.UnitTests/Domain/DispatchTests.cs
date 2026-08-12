@@ -149,8 +149,8 @@ public class DispatchTests
 
         Assert.All(dispatch.Vehicles, vehicle =>
         {
-            Assert.Equal(dispatch.PickupStop.StopId, vehicle.PickupStopId);
-            Assert.Equal(dispatch.DropoffStop.StopId, vehicle.DropoffStopId);
+            Assert.Equal(dispatch.PickupStop!.StopId, vehicle.PickupStopId);
+            Assert.Equal(dispatch.DropoffStop!.StopId, vehicle.DropoffStopId);
             Assert.Same(dispatch.PickupStop, vehicle.PickupStop);
             Assert.Same(dispatch.DropoffStop, vehicle.DropoffStop);
         });

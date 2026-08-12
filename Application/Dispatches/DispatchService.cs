@@ -1,6 +1,7 @@
 using Application;
 using Domain;
 using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 
 namespace Application.Dispatches;
@@ -121,6 +122,36 @@ public class DispatchService
             DispatchId = dispatch.DispatchId,
             DriverId = driver.UserId
         });
+        await _db.SaveChangesAsync();
+    }
+
+    // TODO: unit tests deferred - same InMemory/User-construction blockers as GetByIdAsync.
+    public async Task DeleteAsync(Guid dispatchId)
+    {
+        var dispatch = await _db.Dispatches
+            .Include(d => d.Vehicles)
+            .Include(d => d.Drivers)
+            .Include(d => d.PickupStop)
+            .Include(d => d.DropoffStop)
+            .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
+
+        if (dispatch is null)
+            throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
+
+        if (dispatch.DispatchStatus == DispatchStatus.Delivered)
+            throw new ValidationException(new[] { new ValidationFailure(
+                nameof(Dispatch.DispatchStatus), "Cannot delete a dispatch that has already been delivered.") });
+
+        var pickupStop = dispatch.PickupStop;
+        var dropoffStop = dispatch.DropoffStop;
+
+        dispatch.Cancel();
+
+        if (pickupStop is not null)
+            _db.Stops.Remove(pickupStop);
+        if (dropoffStop is not null)
+            _db.Stops.Remove(dropoffStop);
+
         await _db.SaveChangesAsync();
     }
 }

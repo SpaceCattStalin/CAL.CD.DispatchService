@@ -103,8 +103,8 @@ public class DispatchServiceTests
         Assert.Equal(defaultShipperId, response.ShipperId);
         Assert.Equal("NotSigned", response.DispatchStatus);
         Assert.Equal(request.Vehicles.Count(), response.Vehicles.Count());
-        Assert.Equal(request.PickupStop.Address, response.PickupStop.Address);
-        Assert.Equal(request.DropoffStop.Address, response.DropoffStop.Address);
+        Assert.Equal(request.PickupStop.Address, response.PickupStop!.Address);
+        Assert.Equal(request.DropoffStop.Address, response.DropoffStop!.Address);
     }
 
     [Fact]

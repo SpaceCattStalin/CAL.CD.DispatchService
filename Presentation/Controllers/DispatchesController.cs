@@ -47,4 +47,12 @@ public class DispatchesController : ControllerBase
         await _dispatchService.AssignDriverAsync(dispatchId, request);
         return NoContent();
     }
+
+    [HttpDelete("{dispatchId}")]
+    [Authorize(Policy = PermissionNames.DispatchesDelete)]
+    public async Task<IActionResult> Delete(Guid dispatchId)
+    {
+        await _dispatchService.DeleteAsync(dispatchId);
+        return NoContent();
+    }
 }
