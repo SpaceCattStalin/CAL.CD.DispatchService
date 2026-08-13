@@ -8,9 +8,9 @@ public class Vehicle : BaseEntity
     public Guid DropoffStopId { get; init; }
     public VehicleStatus VehicleStatus { get; private set; }
     public string? Vin { get; private set; }
-    public int Year { get; init; }
-    public string Make { get; init; }
-    public string Model { get; init; }
+    public int Year { get; private set; }
+    public string Make { get; private set; }
+    public string Model { get; private set; }
     public string? Color { get; private set; }
     public Dispatch Dispatch { get; init; }
     public Stop PickupStop { get; init; }
@@ -77,12 +77,28 @@ public class Vehicle : BaseEntity
     }
 
     /// <summary>
-    /// Update this Vehicle's editable fields. Vin and Color are the only editable fields;
-    /// Year, Make, and Model are fixed at creation.
+    /// Update this Vehicle's editable fields. Each parameter is optional (null or empty is
+    /// treated as "no change"); any non-null/non-empty value provided overwrites the current value.
     /// </summary>
-    public void UpdateDetails(string? vin, string? color)
+    /// <param name="vin">New VIN, or null/empty to leave unchanged</param>
+    /// <param name="color">New color, or null/empty to leave unchanged</param>
+    /// <param name="year">New model year, or null to leave unchanged</param>
+    /// <param name="make">New make, or null/empty to leave unchanged</param>
+    /// <param name="model">New model, or null/empty to leave unchanged</param>
+    /// <exception cref="ArgumentOutOfRangeException">year is outside the valid range</exception>
+    public void UpdateDetails(string? vin, string? color, int? year, string? make, string? model)
     {
-        Vin = vin;
-        Color = color;
+        if (year < 1900 || year > DateTime.UtcNow.Year + 1)
+            throw new ArgumentOutOfRangeException(nameof(year), year, "Year must be between 1900 and next year");
+        if (!string.IsNullOrEmpty(make))
+            Make = make;
+        if (!string.IsNullOrEmpty(model))
+            Model = model;
+        if (!string.IsNullOrEmpty(color))
+            Color = color;
+        if (year.HasValue)
+            Year = year.Value;
+        if (!string.IsNullOrEmpty(vin))
+            Vin = vin;
     }
 }

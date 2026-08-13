@@ -1,7 +1,7 @@
 namespace Application.Dispatches;
 
 public record UpdateVehicleRequest(
-    Guid? VehicleId,
+    Guid VehicleId,
     string? Vin,
     int? Year,
     string? Make,

@@ -17,18 +17,27 @@ public class UpdateDispatchRequestValidator : AbstractValidator<UpdateDispatchRe
             .WithMessage("A dispatch must have between 1 and 12 vehicles.");
 
         RuleFor(x => x.Vehicles)
-            .Must(v => v.Where(x => x.VehicleId.HasValue).Select(x => x.VehicleId)
-                        .Distinct().Count() == v.Count(x => x.VehicleId.HasValue))
+            .Must(v => v.Select(x => x.VehicleId)
+                        .Distinct().Count() == v.Count())
             .WithMessage("Duplicate VehicleId in Vehicles.");
 
         RuleForEach(x => x.Vehicles).ChildRules(vehicle =>
         {
-            vehicle.RuleFor(v => v.Make).NotEmpty().When(v => v.VehicleId is null)
+            vehicle.RuleFor(v => v.Make).NotEmpty()
                 .WithMessage("Make is required when adding a new vehicle.");
-            vehicle.RuleFor(v => v.Model).NotEmpty().When(v => v.VehicleId is null)
+            vehicle.RuleFor(v => v.Model).NotEmpty()
                 .WithMessage("Model is required when adding a new vehicle.");
-            vehicle.RuleFor(v => v.Year).NotNull().When(v => v.VehicleId is null)
+            vehicle.RuleFor(v => v.Year).NotNull()
                 .WithMessage("Year is required when adding a new vehicle.");
+
+            vehicle.RuleFor(v => v.Year)
+                .GreaterThanOrEqualTo(1900)
+                .LessThanOrEqualTo(DateTime.UtcNow.Year)
+                .WithMessage("Year must be between 1900 and next year");
+
+            vehicle.RuleFor(v => v.Vin)
+                .Length(10, 15)
+                .WithMessage("Vin must be 10 to 15 character length");
         });
     }
 }

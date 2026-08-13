@@ -184,43 +184,35 @@ public class DispatchService
             throw new ValidationException(new[] { new ValidationFailure(
                 nameof(Dispatch.DispatchStatus), $"Cannot update a dispatch with status {dispatch.DispatchStatus}.") });
 
+        // List of vehicle id in request
         var requestedVehicleIds = request.Vehicles
-            .Where(v => v.VehicleId.HasValue)
-            .Select(v => v.VehicleId!.Value)
-            .ToHashSet();
+            .Select(v => v.VehicleId);
+        
+        // List of vehicle id in current database
+        var storedVehicleIds = _db.Vehicles.Select(v => v.VehicleId);
 
-        foreach (var item in request.Vehicles.Where(v => v.VehicleId.HasValue))
+        // Update vehicle where storedVehicleIds match requestVehicleIds
+        foreach (var item in request.Vehicles.Where(v => storedVehicleIds.Contains(v.VehicleId)))
         {
             var vehicle = dispatch.Vehicles.FirstOrDefault(v => v.VehicleId == item.VehicleId);
             if (vehicle is null)
                 throw new ArgumentException($"VehicleId {item.VehicleId} does not belong to this dispatch.", nameof(request.Vehicles));
 
-            if (item.Make is not null && item.Make != vehicle.Make)
-                throw new ArgumentException("Make cannot be changed for an existing vehicle.", nameof(item.Make));
-            if (item.Model is not null && item.Model != vehicle.Model)
-                throw new ArgumentException("Model cannot be changed for an existing vehicle.", nameof(item.Model));
-            if (item.Year is not null && item.Year != vehicle.Year)
-                throw new ArgumentException("Year cannot be changed for an existing vehicle.", nameof(item.Year));
-
-            vehicle.UpdateDetails(item.Vin, item.Color);
+            vehicle.UpdateDetails(item.Vin, item.Color, item.Year, item.Make, item.Model);
         }
-
+        
+        // Delete vehicle where requestVehicleIds do not contain storedVehicleIds
         var vehiclesToRemove = dispatch.Vehicles.Where(v => !requestedVehicleIds.Contains(v.VehicleId)).ToList();
         foreach (var vehicle in vehiclesToRemove)
             _db.Vehicles.Remove(vehicle);
-        // NOTE: Unknow bug here -----Critical-----
-        //dispatch.Vehicles.Remove(vehicle);
 
-
-        foreach (var item in request.Vehicles.Where(v => !v.VehicleId.HasValue))
+        // Create vehicle where storedVehicleIds do not have requestVehicleIds
+        foreach (var item in request.Vehicles.Where(v => !storedVehicleIds.Contains(v.VehicleId)))
         {
             var newVehicle = Vehicle.CreateVehicle(dispatch, dispatch.PickupStop!, dispatch.DropoffStop!,
                 item.Vin, item.Year!.Value, item.Make!, item.Model!, item.Color);
             _db.Vehicles.Add(newVehicle);
-            // NOTE: Unknow bug here -----Critical-----
-            // dispatch.Vehicles.Add(newVehicle);
         }
-
 
         dispatch.PickupStop!.UpdateDetails(request.PickupStop.Address, request.PickupStop.LocationName,
             request.PickupStop.ContactName, request.PickupStop.ContactPhone, request.PickupStop.ContactEmail);
