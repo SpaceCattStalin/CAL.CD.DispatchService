@@ -1,0 +1,1925 @@
+{
+  "info": {
+    "name": "Dispatch API (POST /dispatch, GET /dispatch/{dispatchId}, POST /dispatch/batch/get, POST /dispatch/{dispatchId}/assign-driver, PUT /dispatch/{dispatchId}, DELETE /dispatch/{dispatchId})",
+    "description": "Scenario coverage for POST /auth/login, POST /dispatch, GET /dispatch/{dispatchId}, POST /dispatch/batch/get, POST /dispatch/{dispatchId}/assign-driver, PUT /dispatch/{dispatchId}, and DELETE /dispatch/{dispatchId}: success paths, FluentValidation-driven 400s (via the ValidationException -> 400 exception handler in Program.cs), ASP.NET model-binding 400s (malformed/missing JSON), the 404 KeyNotFoundException path for GetDispatch/AssignDriver/UpdateDispatch/DeleteDispatch, the partial-failure Found/NotFound split for GetDispatchBatch, the ArgumentException -> 400 path for AssignDriver (missing carrier / unknown or inactive driver) and UpdateDispatch (immutable Make/Model/Year mismatch, VehicleId not on this dispatch), and the ValidationException -> 400 path for UpdateDispatch (status Canceled/Delivered/PendingDelivery) and DeleteDispatch (status already Delivered). All dispatch endpoints require auth -- POST /dispatch needs [Authorize(Policy = PermissionNames.DispatchesCreate)], the GET-style endpoints need [Authorize(Policy = PermissionNames.DispatchesRead)], PUT and assign-driver need [Authorize(Policy = PermissionNames.DispatchesUpdate)], and DELETE needs [Authorize(Policy = PermissionNames.DispatchesDelete)]. Run the Auth > Login request first (or via Collection Runner, which executes folders top-to-bottom) so {{authToken}} is populated before any dispatch request runs. Run both Success > 'Valid request, 1 vehicle -> 201' and 'Valid request, Description omitted -> 201' before the Get Dispatch / Get Dispatch Batch / Assign Driver / Update Dispatch / Delete Dispatch folders so {{dispatchId}}, {{dispatchId2}}, and {{vehicleId2}} are populated. Set {{driverId}} to a seeded/registered active user's UserId before running Assign Driver. Update Dispatch is placed AFTER Assign Driver deliberately: its status-gate 400 case relies on {{dispatchId}} already being PendingDelivery (set by AssignDriverAsync as a side effect), while its success/reconciliation cases use {{dispatchId2}}, which Assign Driver never touches. The Delete Dispatch folder is placed LAST in this collection because it cancels {{dispatchId}} (clearing its vehicles/stops/drivers) -- running it earlier would break the Get Dispatch / Get Dispatch Batch / Assign Driver assertions that expect that dispatch to still have its original data.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const now = Date.now();",
+          "pm.collectionVariables.set('futurePickupDate', new Date(now + 2 * 24 * 60 * 60 * 1000).toISOString());",
+          "pm.collectionVariables.set('futureDropoffDate', new Date(now + 3 * 24 * 60 * 60 * 1000).toISOString());",
+          "pm.collectionVariables.set('pastDate', new Date(now - 24 * 60 * 60 * 1000).toISOString());",
+          "pm.collectionVariables.set('nowDate', new Date(now).toISOString());"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5083" },
+    { "key": "authUserName", "value": "", "description": "Set to a seeded/registered user's UserName with the dispatches:create permission before running this collection." },
+    { "key": "authPassword", "value": "", "description": "Set to that user's password." },
+    { "key": "authToken", "value": "" },
+    { "key": "dispatchId", "value": "", "description": "Set by Success > 'Valid request, 1 vehicle -> 201'; used by the Get Dispatch and Get Dispatch Batch folders." },
+    { "key": "dispatchId2", "value": "", "description": "Set by Success > 'Valid request, Description omitted -> 201'; used by the Get Dispatch Batch and Update Dispatch folders." },
+    { "key": "vehicleId2", "value": "", "description": "Set by Success > 'Valid request, Description omitted -> 201'; the original vehicle on dispatchId2, used by Update Dispatch to confirm it's preserved (not deleted) across updates." },
+    { "key": "newVehicleId2", "value": "", "description": "Set by Update Dispatch > 'Add a new vehicle while keeping existing -> 200'; the newly-added vehicle's id (coexists with vehicleId2), used by later Update Dispatch requests." },
+    { "key": "driverId", "value": "", "description": "Set to a seeded/registered active user's UserId (e.g. TestUserSeedIds.UserId) before running the Assign Driver folder. No dedicated 'driver' role check is performed by AssignDriver beyond IsActive." },
+    { "key": "deliveredDispatchId", "value": "", "description": "Optional. There is no endpoint yet to move a dispatch to Delivered status, so to exercise Delete Dispatch's 400 case, manually run `UPDATE dispatches SET dispatch_status = 'Delivered' WHERE dispatch_id = '<id>'` against your local DB for any existing dispatch, then set this variable to that id before running 'Delete a Delivered dispatch -> 400'." }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login -> 200",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"userName\": \"{{authUserName}}\",\n  \"password\": \"{{authPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "auth", "login" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('response has accessToken and expiresAt', () => {",
+                  "    pm.expect(body.accessToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.expiresAt).to.exist;",
+                  "});",
+                  "pm.collectionVariables.set('authToken', body.accessToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Success",
+      "item": [
+        {
+          "name": "Valid request, 1 vehicle -> 201",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Sample dispatch\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"locationName\": \"Warehouse A\", \"contactName\": \"John Doe\", \"contactPhone\": \"555-1234-678\", \"contactEmail\": \"john@example.com\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\", \"locationName\": \"Warehouse B\", \"contactName\": \"Jane Doe\", \"contactPhone\": \"555-5678-123\", \"contactEmail\": \"jane@example.com\"},\n  \"vehicles\": [ {\"vin\": \"1HGCM82633A123\", \"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\", \"color\": \"Blue\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Location header points at the new dispatch', () => {",
+                  "    const location = pm.response.headers.get('Location');",
+                  "    pm.expect(location).to.eql(`/dispatch/${body.dispatchId}`);",
+                  "});",
+                  "pm.test('dispatchStatus is NotSigned and unsigned', () => {",
+                  "    pm.expect(body.dispatchStatus).to.eql('NotSigned');",
+                  "    pm.expect(body.isSigned).to.eql(false);",
+                  "});",
+                  "pm.test('stop numbers are 1 and 2', () => {",
+                  "    pm.expect(body.pickupStop.stopNumber).to.eql('1');",
+                  "    pm.expect(body.dropoffStop.stopNumber).to.eql('2');",
+                  "});",
+                  "pm.test('one vehicle returned', () => pm.expect(body.vehicles).to.have.lengthOf(1));",
+                  "pm.collectionVariables.set('dispatchId', body.dispatchId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Valid request, 12 vehicles (upper boundary) -> 201",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const vehicles = Array.from({ length: 12 }, () => ({ vin: null, year: 2020, make: 'Honda', model: 'Accord', color: 'Blue' }));",
+                  "pm.collectionVariables.set('vehiclesTwelve', JSON.stringify(vehicles));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('twelve vehicles returned', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.vehicles).to.have.lengthOf(12);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Twelve vehicle dispatch\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": {{vehiclesTwelve}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          }
+        },
+        {
+          "name": "Valid request, Description omitted -> 201",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('description is null', () => {",
+                  "    pm.expect(body.description).to.be.null;",
+                  "});",
+                  "pm.collectionVariables.set('dispatchId2', body.dispatchId);",
+                  "pm.collectionVariables.set('vehicleId2', body.vehicles[0].vehicleId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Valid request, vehicle Vin/Color omitted -> 201",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"No vin or color\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('vin and color are null', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.vehicles[0].vin).to.be.null;",
+                  "    pm.expect(body.vehicles[0].color).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Validation Failures (FluentValidation -> 400)",
+      "description": "These hit CreateDispatchRequestValidator, which throws FluentValidation.ValidationException, mapped to 400 by the exception handler in Program.cs. Response shape: { errors: [ { propertyName, errorMessage } ] }.",
+      "item": [
+        {
+          "name": "CarrierId empty -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"00000000-0000-0000-0000-000000000000\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on CarrierId', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'CarrierId')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Price == 0 -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 0,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Price', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'Price')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Price negative -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": -1,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Price', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'Price')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PickupDate in the past -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{pastDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on PickupDate', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'PickupDate')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DropoffDate <= PickupDate -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futurePickupDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on DropoffDate', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'DropoffDate')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DropoffDate <= now -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{pastDate}}\",\n  \"dropoffDate\": \"{{nowDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on DropoffDate', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'DropoffDate')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Description > 500 chars -> 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('longDescription', 'a'.repeat(501));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Description', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'Description')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"{{longDescription}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          }
+        },
+        {
+          "name": "Vehicles count == 0 -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": []\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'Vehicles')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehicles count == 13 -> 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const vehicles = Array.from({ length: 13 }, () => ({ vin: null, year: 2020, make: 'Honda', model: 'Accord', color: 'Blue' }));",
+                  "pm.collectionVariables.set('vehiclesThirteen', JSON.stringify(vehicles));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'Vehicles')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": {{vehiclesThirteen}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          }
+        },
+        {
+          "name": "Stop Validation (StopRequestValidator)",
+          "description": "Covers StopRequestValidator's rules: Address NotEmpty + Length(20,100), LocationName Length(10,30), ContactName Length(5,50), ContactPhone Length(10,12), ContactEmail Length(15,30) + EmailAddress(). Optional fields (LocationName/ContactName/ContactPhone/ContactEmail) are only validated when present -- omitting them is valid, see the Success folder.",
+          "item": [
+            {
+              "name": "PickupStop.Address empty -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.Address', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.Address')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PickupStop.Address too short (< 20 chars) -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"Short St\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.Address', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.Address')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PickupStop.Address too long (> 100 chars) -> 400",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('longAddress', 'A'.repeat(101));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.Address', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.Address')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"{{longAddress}}\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              }
+            },
+            {
+              "name": "PickupStop.LocationName too short (< 10 chars) -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"locationName\": \"Whs A\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.LocationName', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.LocationName')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PickupStop.LocationName too long (> 30 chars) -> 400",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('longLocationName', 'A'.repeat(31));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.LocationName', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.LocationName')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"locationName\": \"{{longLocationName}}\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              }
+            },
+            {
+              "name": "PickupStop.ContactName too short (< 5 chars) -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"contactName\": \"Jo\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.ContactName', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.ContactName')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PickupStop.ContactName too long (> 50 chars) -> 400",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('longContactName', 'A'.repeat(51));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.ContactName', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.ContactName')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"contactName\": \"{{longContactName}}\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              }
+            },
+            {
+              "name": "PickupStop.ContactPhone too short (< 10 chars) -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"contactPhone\": \"12345\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.ContactPhone', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.ContactPhone')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PickupStop.ContactPhone too long (> 12 chars) -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"contactPhone\": \"1234567890123\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.ContactPhone', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.ContactPhone')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PickupStop.ContactEmail too short (< 15 chars) -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"contactEmail\": \"a@b.co\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.ContactEmail', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.ContactEmail')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PickupStop.ContactEmail too long (> 30 chars) -> 400",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('longContactEmail', 'a'.repeat(25) + '@example.com');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.ContactEmail', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.ContactEmail')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"contactEmail\": \"{{longContactEmail}}\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              }
+            },
+            {
+              "name": "PickupStop.ContactEmail invalid format (no @) -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"contactEmail\": \"not-an-email-1234\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on PickupStop.ContactEmail', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'PickupStop.ContactEmail')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "DropoffStop.Address empty -> 400",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+                "body": {
+                  "mode": "raw",
+                  "options": { "raw": { "language": "json" } },
+                  "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                      "pm.test('error on DropoffStop.Address', () => {",
+                      "    const body = pm.response.json();",
+                      "    pm.expect(body.errors.some(e => e.propertyName === 'DropoffStop.Address')).to.be.true;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Get Dispatch (GET /dispatch/{dispatchId})",
+      "description": "Covers GetDispatch: 200 with related Vehicles/Stops/Drivers for an existing dispatch, and 404 (KeyNotFoundException -> ProblemDetails) for an unknown id. Requires {{dispatchId}} to be set by Success > 'Valid request, 1 vehicle -> 201' first.",
+      "item": [
+        {
+          "name": "Existing dispatch -> 200",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('dispatchId matches requested id', () => {",
+                  "    pm.expect(body.dispatchId).to.eql(pm.collectionVariables.get('dispatchId'));",
+                  "});",
+                  "pm.test('response includes vehicles, stops, and drivers', () => {",
+                  "    pm.expect(body.vehicles).to.be.an('array');",
+                  "    pm.expect(body.pickupStop).to.exist;",
+                  "    pm.expect(body.dropoffStop).to.exist;",
+                  "    pm.expect(body.drivers).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Non-existent dispatch -> 404",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/dispatch/00000000-0000-0000-0000-000000000000", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "00000000-0000-0000-0000-000000000000" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ProblemDetails title is Resource Not Found', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.title).to.eql('Resource Not Found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Get Dispatch Batch (POST /dispatch/batch/get)",
+      "description": "Covers GetDispatchBatch: partial-failure Found/NotFound split, all-found, all-not-found, and the empty-array 400 (GetDispatchBatchRequestValidator). Requires {{dispatchId}} and {{dispatchId2}} to be set by the two Success > 'Valid request...201' requests first.",
+      "item": [
+        {
+          "name": "All ids found -> 200",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"dispatchIds\": [\"{{dispatchId}}\", \"{{dispatchId2}}\"]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/batch/get", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "batch", "get" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('both dispatches returned in found, none in notFound', () => {",
+                  "    pm.expect(body.found).to.have.lengthOf(2);",
+                  "    pm.expect(body.notFound).to.have.lengthOf(0);",
+                  "    const foundIds = body.found.map(d => d.dispatchId);",
+                  "    pm.expect(foundIds).to.include.members([pm.collectionVariables.get('dispatchId'), pm.collectionVariables.get('dispatchId2')]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mixed found and not found -> 200",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"dispatchIds\": [\"{{dispatchId}}\", \"00000000-0000-0000-0000-000000000000\"]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/batch/get", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "batch", "get" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('one found, one notFound', () => {",
+                  "    pm.expect(body.found).to.have.lengthOf(1);",
+                  "    pm.expect(body.found[0].dispatchId).to.eql(pm.collectionVariables.get('dispatchId'));",
+                  "    pm.expect(body.notFound).to.eql(['00000000-0000-0000-0000-000000000000']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "All ids not found -> 200",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"dispatchIds\": [\"00000000-0000-0000-0000-000000000000\", \"00000000-0000-0000-0000-000000000001\"]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/batch/get", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "batch", "get" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('found is empty, both ids in notFound', () => {",
+                  "    pm.expect(body.found).to.have.lengthOf(0);",
+                  "    pm.expect(body.notFound).to.have.lengthOf(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Empty DispatchIds array -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"dispatchIds\": []\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/batch/get", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "batch", "get" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on DispatchIds', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'DispatchIds')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Assign Driver (POST /dispatch/{dispatchId}/assign-driver)",
+      "description": "Covers AssignDriver: 204 on success, idempotent 204 on re-assigning the same driver, 404 for an unknown dispatch (KeyNotFoundException), 400 for an unknown driver (ArgumentException), and 400 for an empty DriverId (AssignDriverRequestValidator). Requires {{dispatchId}} (Success > 'Valid request, 1 vehicle -> 201') and {{driverId}} (set manually) to be populated first. No inactive-driver case is included here - the seed data (TestUserSeedIds) only provisions one active test user, so there's no known inactive UserId to exercise that branch against.",
+      "item": [
+        {
+          "name": "Assign driver to dispatch -> 204",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"driverId\": \"{{driverId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId}}/assign-driver", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId}}", "assign-driver" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Assign same driver again (idempotent) -> 204",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"driverId\": \"{{driverId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId}}/assign-driver", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId}}", "assign-driver" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204 (no duplicate created)', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Non-existent dispatch -> 404",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"driverId\": \"{{driverId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/00000000-0000-0000-0000-000000000000/assign-driver", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "00000000-0000-0000-0000-000000000000", "assign-driver" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ProblemDetails title is Resource Not Found', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.title).to.eql('Resource Not Found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Non-existent driver -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"driverId\": \"11111111-1111-1111-1111-111111111111\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId}}/assign-driver", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId}}", "assign-driver" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ProblemDetails title is Invalid Request', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.title).to.eql('Invalid Request');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Empty DriverId -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"driverId\": \"00000000-0000-0000-0000-000000000000\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId}}/assign-driver", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId}}", "assign-driver" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on DriverId', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'DriverId')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Update Dispatch (PUT /dispatch/{dispatchId})",
+      "description": "Covers UpdateDispatch: 200 on success (updates Price/Dates/Description/Stops, and reconciles Vehicles), 400 for Vehicles-array-level failures (count, duplicate VehicleId, duplicate-via-omitted-VehicleId), 400 for per-vehicle field failures (Make/Model/Year required, Year range, Vin length -- these apply to EVERY vehicle in the array, not just new ones), 400 for a VehicleId that belongs to a different dispatch, 400 (ValidationException, DispatchStatus field) when the dispatch's status is Canceled/Delivered/PendingDelivery, and 404 for an unknown dispatch. Uses {{dispatchId2}}/{{vehicleId2}} (untouched by Assign Driver) for the success/reconciliation cases, and {{dispatchId}} (already PendingDelivery after Assign Driver ran) for the status-gate case -- see the collection-level description for why this folder is ordered after Assign Driver. IMPORTANT -- behavior notes for this DTO shape: (1) VehicleId is a required (non-nullable) field on every vehicle entry, new or existing. A vehicle is only treated as 'existing' if its VehicleId matches a row in the Vehicles table ANYWHERE in the database (not scoped to this dispatch) -- an unrecognized VehicleId is silently treated as a brand-new vehicle rather than erroring, while a VehicleId belonging to a genuinely different dispatch fails with 'does not belong to this dispatch'. (2) A missing VehicleId defaults to an empty guid, so sending two or more new vehicles in the same request without explicit distinct ids collides on the Duplicate-VehicleId rule -- always generate a fresh guid client-side for each new vehicle. (3) Make/Model/Year/Vin rules apply to every vehicle in the array, existing or new: Vin (if present) must be 10-15 chars, Year (if present) must be 1900..currentYear, and Make/Model/Year are all required -- even when only updating Vin/Color on an existing vehicle. (4) Make/Model/Year are no longer immutable on existing vehicles; they can be changed freely. (5) Vehicles use full-replace semantics -- any existing vehicle whose VehicleId is not present in the request's vehicles array is DELETED. Success-case prerequest scripts fetch the dispatch's current vehicles first (carrying forward vin/year/make/model/color) and include all of them in the payload to avoid wiping out vehicles you didn't mean to touch, and to satisfy the now-mandatory per-vehicle fields.",
+      "item": [
+        {
+          "name": "Add a new vehicle while keeping existing -> 200",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dispatchId2 = pm.collectionVariables.get('dispatchId2');",
+                  "const authToken = pm.collectionVariables.get('authToken');",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                  "",
+                  "const getResponse = await pm.sendRequest({",
+                  "    url: `${baseUrl}/dispatch/${dispatchId2}`,",
+                  "    method: 'GET',",
+                  "    header: { Authorization: `Bearer ${authToken}` }",
+                  "});",
+                  "",
+                  "const currentVehicles = getResponse.json().vehicles.map(v => ({",
+                  "    vehicleId: v.vehicleId,",
+                  "    vin: v.vin,",
+                  "    year: v.year,",
+                  "    make: v.make,",
+                  "    model: v.model,",
+                  "    color: v.color",
+                  "}));",
+                  "",
+                  "const newVehicleId = pm.variables.replaceIn('{{$guid}}');",
+                  "const newVehicle = { vehicleId: newVehicleId, year: 2021, make: 'Toyota', model: 'Camry', color: 'Silver' };",
+                  "",
+                  "pm.collectionVariables.set('vehiclesForUpdate', JSON.stringify([...currentVehicles, newVehicle]));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('price, description, and stop fields updated', () => {",
+                  "    pm.expect(body.price).to.eql(750);",
+                  "    pm.expect(body.description).to.eql('Updated dispatch description');",
+                  "    pm.expect(body.pickupStop.locationName).to.eql('Warehouse A Updated');",
+                  "});",
+                  "pm.test('original vehicle kept, new vehicle added', () => {",
+                  "    pm.expect(body.vehicles).to.have.lengthOf(2);",
+                  "    const originalVehicle = body.vehicles.find(v => v.vehicleId === pm.collectionVariables.get('vehicleId2'));",
+                  "    pm.expect(originalVehicle, 'original vehicle should still be present').to.exist;",
+                  "    pm.expect(originalVehicle.make).to.eql('Honda');",
+                  "    const newVehicle = body.vehicles.find(v => v.vehicleId !== pm.collectionVariables.get('vehicleId2'));",
+                  "    pm.expect(newVehicle.make).to.eql('Toyota');",
+                  "    pm.expect(newVehicle.color).to.eql('Silver');",
+                  "    pm.collectionVariables.set('newVehicleId2', newVehicle.vehicleId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\", \"locationName\": \"Warehouse A Updated\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\", \"locationName\": \"Warehouse B Updated\"},\n  \"vehicles\": {{vehiclesForUpdate}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          }
+        },
+        {
+          "name": "Update Make/Model/Year on an existing vehicle -> 200",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dispatchId2 = pm.collectionVariables.get('dispatchId2');",
+                  "const authToken = pm.collectionVariables.get('authToken');",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                  "const newVehicleId2 = pm.collectionVariables.get('newVehicleId2');",
+                  "",
+                  "const getResponse = await pm.sendRequest({",
+                  "    url: `${baseUrl}/dispatch/${dispatchId2}`,",
+                  "    method: 'GET',",
+                  "    header: { Authorization: `Bearer ${authToken}` }",
+                  "});",
+                  "",
+                  "const updatedVehicles = getResponse.json().vehicles.map(v => ({",
+                  "    vehicleId: v.vehicleId,",
+                  "    vin: v.vin,",
+                  "    year: v.vehicleId === newVehicleId2 ? 2018 : v.year,",
+                  "    make: v.vehicleId === newVehicleId2 ? 'Ford' : v.make,",
+                  "    model: v.vehicleId === newVehicleId2 ? 'Fusion' : v.model,",
+                  "    color: v.color",
+                  "}));",
+                  "",
+                  "pm.collectionVariables.set('vehiclesForUpdate', JSON.stringify(updatedVehicles));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Make/Model/Year updated on existing vehicle, vehicle count unchanged', () => {",
+                  "    pm.expect(body.vehicles).to.have.lengthOf(2);",
+                  "    const target = body.vehicles.find(v => v.vehicleId === pm.collectionVariables.get('newVehicleId2'));",
+                  "    pm.expect(target, 'target vehicle should still be present').to.exist;",
+                  "    pm.expect(target.make).to.eql('Ford');",
+                  "    pm.expect(target.model).to.eql('Fusion');",
+                  "    pm.expect(target.year).to.eql(2018);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": {{vehiclesForUpdate}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          }
+        },
+        {
+          "name": "Unrecognized VehicleId is treated as a new vehicle -> 200",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dispatchId2 = pm.collectionVariables.get('dispatchId2');",
+                  "const authToken = pm.collectionVariables.get('authToken');",
+                  "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                  "",
+                  "const getResponse = await pm.sendRequest({",
+                  "    url: `${baseUrl}/dispatch/${dispatchId2}`,",
+                  "    method: 'GET',",
+                  "    header: { Authorization: `Bearer ${authToken}` }",
+                  "});",
+                  "",
+                  "const currentVehicles = getResponse.json().vehicles.map(v => ({",
+                  "    vehicleId: v.vehicleId,",
+                  "    vin: v.vin,",
+                  "    year: v.year,",
+                  "    make: v.make,",
+                  "    model: v.model,",
+                  "    color: v.color",
+                  "}));",
+                  "",
+                  "pm.collectionVariables.set('vehicleCountBeforeUnknownId', currentVehicles.length);",
+                  "",
+                  "const unknownVehicleId = pm.variables.replaceIn('{{$guid}}');",
+                  "pm.collectionVariables.set('unknownVehicleIdSent', unknownVehicleId);",
+                  "const unknownIdVehicle = { vehicleId: unknownVehicleId, year: 2019, make: 'Nissan', model: 'Altima', color: 'Black' };",
+                  "",
+                  "pm.collectionVariables.set('vehiclesForUpdate', JSON.stringify([...currentVehicles, unknownIdVehicle]));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('unrecognized VehicleId creates a new vehicle instead of erroring', () => {",
+                  "    const expectedCount = Number(pm.collectionVariables.get('vehicleCountBeforeUnknownId')) + 1;",
+                  "    pm.expect(body.vehicles).to.have.lengthOf(expectedCount);",
+                  "    const created = body.vehicles.find(v => v.make === 'Nissan' && v.model === 'Altima');",
+                  "    pm.expect(created, 'new vehicle should have been created').to.exist;",
+                  "    pm.expect(created.vehicleId).to.not.eql(pm.collectionVariables.get('unknownVehicleIdSent'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": {{vehiclesForUpdate}}\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          }
+        },
+        {
+          "name": "VehicleId belonging to another dispatch -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"vehicleId\": \"{{vehicleId}}\", \"vin\": \"1HGCM82633ANEW1\", \"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ProblemDetails title is Invalid Request', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.title).to.eql('Invalid Request');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehicles count == 0 -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": []\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'Vehicles')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Duplicate VehicleId -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"vehicleId\": \"{{newVehicleId2}}\", \"vin\": \"1HGCM82633AAAA1\", \"year\": 2018, \"make\": \"Ford\", \"model\": \"Fusion\"}, {\"vehicleId\": \"{{newVehicleId2}}\", \"color\": \"Red\", \"year\": 2018, \"make\": \"Ford\", \"model\": \"Fusion\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'Vehicles')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Two new vehicles both omitting VehicleId -> 400 (collide on empty guid)",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2019, \"make\": \"Kia\", \"model\": \"Soul\", \"color\": \"Yellow\"}, {\"year\": 2019, \"make\": \"Kia\", \"model\": \"Soul\", \"color\": \"Yellow\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles (both omitted ids default to the same empty guid)', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'Vehicles')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vin too short (< 10 chars) on existing vehicle -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"vehicleId\": \"{{vehicleId2}}\", \"vin\": \"SHORT1\", \"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles[].Vin', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName.includes('Vin'))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vin too long (> 15 chars) on existing vehicle -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"vehicleId\": \"{{vehicleId2}}\", \"vin\": \"1HGCM82633ATOOLONG123\", \"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles[].Vin', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName.includes('Vin'))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Year below 1900 on existing vehicle -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"vehicleId\": \"{{vehicleId2}}\", \"year\": 1899, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles[].Year', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName.includes('Year'))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Year in the future on existing vehicle -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"vehicleId\": \"{{vehicleId2}}\", \"year\": 2999, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles[].Year', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName.includes('Year'))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Make missing on existing vehicle -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"vehicleId\": \"{{vehicleId2}}\", \"model\": \"Accord\", \"year\": 2020} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId2}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId2}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on Vehicles[].Make', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName.includes('Make'))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dispatch status is PendingDelivery -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on DispatchStatus', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'DispatchStatus')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Non-existent dispatch -> 404",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"price\": 750,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"description\": \"Updated dispatch description\",\n  \"pickupStop\": {\"address\": \"12345 Main Accord Street\"},\n  \"dropoffStop\": {\"address\": \"45678 Oak Accord Street\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch/00000000-0000-0000-0000-000000000000", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "00000000-0000-0000-0000-000000000000" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ProblemDetails title is Resource Not Found', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.title).to.eql('Resource Not Found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Malformed Request (ASP.NET model binding -> 400)",
+      "description": "These never reach FluentValidation - ASP.NET Core's own model binding rejects them first. Response shape: RFC 9110 ProblemDetails, { errors: { FieldName: [messages] } }.",
+      "item": [
+        {
+          "name": "Missing required field (no pickupStop) -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": 500,\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ProblemDetails flags PickupStop as required', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.title).to.eql('One or more validation errors occurred.');",
+                  "    pm.expect(body.errors).to.have.property('PickupStop');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong type (price as string) -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"carrierId\": \"11111111-1111-1111-1111-111111111111\",\n  \"price\": \"abc\",\n  \"pickupDate\": \"{{futurePickupDate}}\",\n  \"dropoffDate\": \"{{futureDropoffDate}}\",\n  \"pickupStop\": {\"address\": \"123 Main St\"},\n  \"dropoffStop\": {\"address\": \"456 Oak Ave\"},\n  \"vehicles\": [ {\"year\": 2020, \"make\": \"Honda\", \"model\": \"Accord\"} ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ProblemDetails flags the JSON conversion failure at $.price', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors).to.have.property('$.price');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Empty body -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "body": { "mode": "raw", "raw": "" },
+            "url": { "raw": "{{baseUrl}}/dispatch", "host": [ "{{baseUrl}}" ], "path": [ "dispatch" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('ProblemDetails flags a non-empty body is required', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors['']).to.include('A non-empty request body is required.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Delete Dispatch (DELETE /dispatch/{dispatchId})",
+      "description": "Covers DeleteDispatch: 204 on success (cascades Vehicles/DispatchDrivers and clears the dispatch's own Stops via the SetNull FK, sets DispatchStatus=Canceled), 404 for an unknown dispatch, and 400 (ValidationException, DispatchStatus field) for a dispatch already Delivered. Placed LAST in this collection since it mutates {{dispatchId}} -- see the collection-level description. The Delivered case needs {{deliveredDispatchId}} set manually first (see that variable's description); it's skipped automatically if left blank.",
+      "item": [
+        {
+          "name": "Delete dispatch -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deleted dispatch now reads back as Canceled with no children -> 200",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/dispatch/{{dispatchId}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{dispatchId}}" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('dispatchStatus is Canceled, vehicles/drivers empty, stops null', () => {",
+                  "    pm.expect(body.dispatchStatus).to.eql('Canceled');",
+                  "    pm.expect(body.vehicles).to.have.lengthOf(0);",
+                  "    pm.expect(body.drivers).to.have.lengthOf(0);",
+                  "    pm.expect(body.pickupStop).to.be.null;",
+                  "    pm.expect(body.dropoffStop).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Non-existent dispatch -> 404",
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/dispatch/00000000-0000-0000-0000-000000000000", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "00000000-0000-0000-0000-000000000000" ] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('ProblemDetails title is Resource Not Found', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.title).to.eql('Resource Not Found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete a Delivered dispatch -> 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('deliveredDispatchId')) {",
+                  "    console.warn('deliveredDispatchId not set - see its variable description. Skipping this request.');",
+                  "    postman.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('error on DispatchStatus', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors.some(e => e.propertyName === 'DispatchStatus')).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{authToken}}" } ],
+            "url": { "raw": "{{baseUrl}}/dispatch/{{deliveredDispatchId}}", "host": [ "{{baseUrl}}" ], "path": [ "dispatch", "{{deliveredDispatchId}}" ] }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -36,8 +36,7 @@ ScaffoldingReadMe.txt
 # NuGet Symbol Packages
 *.snupkg
 
-# dotenv environment variables file
-.env
+
 
 # Others
 ~$*
@@ -60,7 +59,3 @@ nunit-*.xml
 ref_design_images
 .claude
 notes.txt
-*.md
-!README.md
-docs
-docs/*
