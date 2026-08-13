@@ -275,4 +275,157 @@ public class DispatchServiceTests
         Assert.Empty(response.Found);
         Assert.Equal(requestedIds, response.NotFound.ToArray());
     }
+
+    [Fact]
+    public async Task AssignDriver_InvalidRequest_ThrowsValidationException_NoSave()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var request = new AssignDriverRequest(Guid.Empty);
+        mockAssignDriverValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(FailedValidationResult());
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+
+            await Assert.ThrowsAsync<ValidationException>(() => service.AssignDriverAsync(dispatch.DispatchId, request));
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.FindAsync(dispatch.DispatchId);
+        Assert.Equal(DispatchStatus.NotSigned, reloaded!.DispatchStatus);
+    }
+
+    [Fact]
+    public async Task AssignDriver_UnknownDispatch_ThrowsKeyNotFoundException()
+    {
+        var request = new AssignDriverRequest(Guid.NewGuid());
+        mockAssignDriverValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using var db = InMemoryDbContextFactory.Create();
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.AssignDriverAsync(Guid.NewGuid(), request));
+    }
+
+    [Theory]
+    [InlineData(true)]  // driver id does not exist in Users at all
+    [InlineData(false)] // driver id exists but IsActive is false
+    public async Task AssignDriver_UnknownOrInactiveDriver_ThrowsArgumentException(bool driverIsUnknown)
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        var companyId = Guid.NewGuid();
+        Dispatch dispatch;
+        Guid driverId;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch);
+
+            if (driverIsUnknown)
+            {
+                driverId = Guid.NewGuid();
+            }
+            else
+            {
+                var inactiveDriver = User.CreateUser(companyId, "Inactive", "Driver", "555-000-2222",
+                    "inactive.driver@example.com", "idriver", "hash", UserRole.Driver, isActive: false);
+                seedDb.Users.Add(inactiveDriver);
+                driverId = inactiveDriver.UserId;
+            }
+
+            await seedDb.SaveChangesAsync();
+        }
+
+        var request = new AssignDriverRequest(driverId);
+        mockAssignDriverValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using var db = InMemoryDbContextFactory.Create(dbName);
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.AssignDriverAsync(dispatch.DispatchId, request));
+    }
+
+    [Fact]
+    public async Task AssignDriver_ValidDriver_SetsPendingDeliveryAndSavesOnce()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        var companyId = Guid.NewGuid();
+        Dispatch dispatch;
+        User driver;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            driver = User.CreateUser(companyId, "Active", "Driver", "555-000-3333",
+                "active.driver@example.com", "adriver", "hash", UserRole.Driver);
+            seedDb.Dispatches.Add(dispatch);
+            seedDb.Users.Add(driver);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var request = new AssignDriverRequest(driver.UserId);
+        mockAssignDriverValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            await service.AssignDriverAsync(dispatch.DispatchId, request);
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.Include(d => d.Drivers).FirstAsync(d => d.DispatchId == dispatch.DispatchId);
+        Assert.Equal(DispatchStatus.PendingDelivery, reloaded.DispatchStatus);
+        var assignedDriver = Assert.Single(reloaded.Drivers);
+        Assert.Equal(driver.UserId, assignedDriver.DriverId);
+    }
+
+    [Fact]
+    public async Task AssignDriver_AlreadyAssigned_DoesNotDuplicate()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        var companyId = Guid.NewGuid();
+        Dispatch dispatch;
+        User driver;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            driver = User.CreateUser(companyId, "Active", "Driver", "555-000-4444",
+                "active.driver2@example.com", "adriver2", "hash", UserRole.Driver);
+            seedDb.Dispatches.Add(dispatch);
+            seedDb.Users.Add(driver);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var request = new AssignDriverRequest(driver.UserId);
+        mockAssignDriverValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using (var db1 = InMemoryDbContextFactory.Create(dbName))
+        {
+            await CreateService(db1).AssignDriverAsync(dispatch.DispatchId, request);
+        }
+
+        using (var db2 = InMemoryDbContextFactory.Create(dbName))
+        {
+            await CreateService(db2).AssignDriverAsync(dispatch.DispatchId, request);
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.Include(d => d.Drivers).FirstAsync(d => d.DispatchId == dispatch.DispatchId);
+        Assert.Single(reloaded.Drivers);
+    }
 }
