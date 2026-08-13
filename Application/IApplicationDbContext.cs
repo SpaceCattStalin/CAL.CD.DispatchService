@@ -9,6 +9,7 @@ public interface IApplicationDbContext
     DbSet<User> Users { get; }
     DbSet<Role> Roles { get; }
     DbSet<Stop> Stops { get; }
+    DbSet<Vehicle> Vehicles { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

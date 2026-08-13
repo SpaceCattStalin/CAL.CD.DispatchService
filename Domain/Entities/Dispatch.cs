@@ -124,6 +124,28 @@ public class Dispatch : BaseEntity
                 break;
         }
     }
+    /// <summary>
+    /// Update this Dispatch's editable fields. CarrierId, ShipperId, and DispatchStatus are not
+    /// affected here.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The argument exceeded the allowed range</exception>
+    public void UpdateDetails(decimal price, DateTime pickupDate, DateTime dropoffDate, string? description)
+    {
+        if (price <= 0)
+            throw new ArgumentOutOfRangeException(nameof(price), price, "Price must be greater than 0");
+
+        if (pickupDate < DateTime.UtcNow.Date)
+            throw new ArgumentOutOfRangeException(nameof(pickupDate), pickupDate, "PickupDate cannot be in the past");
+
+        if (dropoffDate <= DateTime.UtcNow || dropoffDate <= pickupDate)
+            throw new ArgumentOutOfRangeException(nameof(dropoffDate), dropoffDate, "DropoffDate must be after both now and PickupDate");
+
+        Price = price;
+        PickupDate = pickupDate;
+        DropoffDate = dropoffDate;
+        Description = description;
+    }
+
     public void Cancel()
     {
         UpdateStatus(DispatchStatus.Canceled);

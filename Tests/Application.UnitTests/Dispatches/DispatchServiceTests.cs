@@ -1,9 +1,11 @@
 using Application.Dispatches;
+using Castle.Core.Logging;
 using Domain;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using Microsoft.Extensions.Logging;
 
 namespace Application.UnitTests.Dispatches;
 
@@ -38,6 +40,8 @@ public class DispatchServiceTests
     private readonly Mock<IValidator<CreateDispatchRequest>> mockValidator = new();
     private readonly Mock<IValidator<GetDispatchBatchRequest>> mockBatchValidator = new();
     private readonly Mock<IValidator<AssignDriverRequest>> mockAssignDriverValidator = new();
+    private readonly Mock<IValidator<UpdateDispatchRequest>> mockUpdateValidator = new();
+    private readonly Mock<ILogger<DispatchService>> mockLogger = new();
     private readonly Mock<ICurrentUserService> mockCurrentUser = new();
     private readonly Mock<DbSet<Dispatch>> mockSet = new();
     private readonly Mock<IApplicationDbContext> mockDb = new();
@@ -47,7 +51,7 @@ public class DispatchServiceTests
         mockDb.Setup(db => db.Dispatches).Returns(mockSet.Object);
         mockDb.Setup(db => db.SaveChangesAsync(default)).ReturnsAsync(1);
         mockCurrentUser.Setup(u => u.UserId).Returns(defaultShipperId);
-        return new DispatchService(mockDb.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockCurrentUser.Object);
+        return new DispatchService(mockDb.Object, mockLogger.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockUpdateValidator.Object, mockCurrentUser.Object);
     }
 
     [Fact]
