@@ -77,6 +77,12 @@ public class DispatchServiceTests
                 ("1HGCM82633A123", 2020, "Honda", "Accord", "Blue")
             });
 
+    private static UpdateDispatchRequest MakeUpdateRequest(IEnumerable<UpdateVehicleRequest> vehicles) =>
+        new(750m, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), "Updated dispatch description",
+            new StopRequest("12345 Main Accord Street", "Warehouse A", "John Doe", "555-1234-678", "john@example.com"),
+            new StopRequest("45678 Oak Accord Street", "Warehouse B", "Jane Doe", "555-5678-123", "jane@example.com"),
+            vehicles);
+
     [Fact]
     public async Task CreateAsync_InvalidRequest_ThrowsValidationException_AndDoesNotSave()
     {
@@ -503,5 +509,284 @@ public class DispatchServiceTests
         Assert.Empty(reloaded.Drivers);
         Assert.Null(await verifyDb.Stops.FindAsync(pickupStopId));
         Assert.Null(await verifyDb.Stops.FindAsync(dropoffStopId));
+    }
+
+    [Fact]
+    public async Task Update_InvalidRequest_ThrowsValidationException_NoSave()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var request = MakeUpdateRequest(Array.Empty<UpdateVehicleRequest>());
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(FailedValidationResult());
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            await Assert.ThrowsAsync<ValidationException>(() => service.UpdateAsync(dispatch.DispatchId, request));
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.FindAsync(dispatch.DispatchId);
+        Assert.Equal(500m, reloaded!.Price);
+    }
+
+    [Fact]
+    public async Task Update_UnknownDispatch_ThrowsKeyNotFoundException()
+    {
+        var request = MakeUpdateRequest(new[] { new UpdateVehicleRequest(Guid.Empty, null, 2020, "Honda", "Accord", null) });
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using var db = InMemoryDbContextFactory.Create();
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateAsync(Guid.NewGuid(), request));
+    }
+
+    [Theory]
+    [InlineData(DispatchStatus.Canceled)]
+    [InlineData(DispatchStatus.Delivered)]
+    [InlineData(DispatchStatus.PendingDelivery)]
+    public async Task Update_StatusIsCanceledOrDeliveredOrPendingDelivery_ThrowsValidationException(DispatchStatus status)
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            dispatch.UpdateStatus(status);
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var request = MakeUpdateRequest(new[] { new UpdateVehicleRequest(Guid.Empty, null, 2020, "Honda", "Accord", null) });
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using var db = InMemoryDbContextFactory.Create(dbName);
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<ValidationException>(() => service.UpdateAsync(dispatch.DispatchId, request));
+    }
+
+    [Fact]
+    public async Task Update_ExistingVehicleIdOnThisDispatch_UpdatesFieldsInPlace()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var existingVehicleId = dispatch.Vehicles.Single().VehicleId;
+        var request = MakeUpdateRequest(new[]
+        {
+            new UpdateVehicleRequest(existingVehicleId, "9HGCM82633AUPDATE", 2019, "Ford", "Fusion", "Red")
+        });
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            await service.UpdateAsync(dispatch.DispatchId, request);
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.Include(d => d.Vehicles).FirstAsync(d => d.DispatchId == dispatch.DispatchId);
+        var vehicle = Assert.Single(reloaded.Vehicles);
+        Assert.Equal(existingVehicleId, vehicle.VehicleId);
+        Assert.Equal("9HGCM82633AUPDATE", vehicle.Vin);
+        Assert.Equal(2019, vehicle.Year);
+        Assert.Equal("Ford", vehicle.Make);
+        Assert.Equal("Fusion", vehicle.Model);
+        Assert.Equal("Red", vehicle.Color);
+    }
+
+    [Fact]
+    public async Task Update_VehicleIdBelongsToAnotherDispatch_ThrowsArgumentException()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatchA;
+        Dispatch dispatchB;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatchA = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            dispatchB = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.AddRange(dispatchA, dispatchB);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var otherDispatchVehicleId = dispatchB.Vehicles.Single().VehicleId;
+        var request = MakeUpdateRequest(new[]
+        {
+            new UpdateVehicleRequest(otherDispatchVehicleId, null, 2020, "Honda", "Accord", null)
+        });
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using var db = InMemoryDbContextFactory.Create(dbName);
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpdateAsync(dispatchA.DispatchId, request));
+    }
+
+    [Fact]
+    public async Task Update_UnknownVehicleId_CreatesNewVehicle()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var existingVehicleId = dispatch.Vehicles.Single().VehicleId;
+        var unknownVehicleId = Guid.NewGuid();
+        var request = MakeUpdateRequest(new[]
+        {
+            new UpdateVehicleRequest(existingVehicleId, null, 2020, "Honda", "Accord", null),
+            new UpdateVehicleRequest(unknownVehicleId, "1HGCM82633ANEW1", 2022, "Toyota", "Camry", "Silver")
+        });
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            await service.UpdateAsync(dispatch.DispatchId, request);
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.Include(d => d.Vehicles).FirstAsync(d => d.DispatchId == dispatch.DispatchId);
+        Assert.Equal(2, reloaded.Vehicles.Count);
+        var created = Assert.Single(reloaded.Vehicles, v => v.VehicleId != existingVehicleId);
+        Assert.Equal("Toyota", created.Make);
+        Assert.Equal("Camry", created.Model);
+        Assert.NotEqual(unknownVehicleId, created.VehicleId);
+    }
+
+    [Fact]
+    public async Task Update_VehicleOmittedFromRequest_IsRemoved()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var originalVehicleId = dispatch.Vehicles.Single().VehicleId;
+        var request = MakeUpdateRequest(new[]
+        {
+            new UpdateVehicleRequest(Guid.NewGuid(), null, 2021, "Nissan", "Altima", null)
+        });
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            await service.UpdateAsync(dispatch.DispatchId, request);
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.Include(d => d.Vehicles).FirstAsync(d => d.DispatchId == dispatch.DispatchId);
+        Assert.Single(reloaded.Vehicles);
+        Assert.DoesNotContain(reloaded.Vehicles, v => v.VehicleId == originalVehicleId);
+        Assert.Null(await verifyDb.Vehicles.FindAsync(originalVehicleId));
+    }
+
+    [Fact]
+    public async Task Update_UpdatesStopsAndDispatchFields()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var existingVehicleId = dispatch.Vehicles.Single().VehicleId;
+        var request = new UpdateDispatchRequest(
+            999m, DateTime.UtcNow.AddDays(5), DateTime.UtcNow.AddDays(6), "New description",
+            new StopRequest("12345 Main Accord Street Updated", "Warehouse A2", "New Contact", "555-000-9999", "new@example.com"),
+            new StopRequest("45678 Oak Accord Street Updated", "Warehouse B2", "New Contact 2", "555-000-8888", "new2@example.com"),
+            new[] { new UpdateVehicleRequest(existingVehicleId, null, 2020, "Honda", "Accord", null) });
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            await service.UpdateAsync(dispatch.DispatchId, request);
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches
+            .Include(d => d.PickupStop)
+            .Include(d => d.DropoffStop)
+            .FirstAsync(d => d.DispatchId == dispatch.DispatchId);
+
+        Assert.Equal(999m, reloaded.Price);
+        Assert.Equal("New description", reloaded.Description);
+        Assert.Equal("12345 Main Accord Street Updated", reloaded.PickupStop!.Address);
+        Assert.Equal("45678 Oak Accord Street Updated", reloaded.DropoffStop!.Address);
+    }
+
+    [Fact]
+    public async Task Update_Valid_CallsSaveChangesAsyncOnce()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var existingVehicleId = dispatch.Vehicles.Single().VehicleId;
+        var request = MakeUpdateRequest(new[]
+        {
+            new UpdateVehicleRequest(existingVehicleId, null, 2020, "Honda", "Accord", null)
+        });
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            var response = await service.UpdateAsync(dispatch.DispatchId, request);
+            Assert.Equal(750m, response.Price);
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.FindAsync(dispatch.DispatchId);
+        Assert.Equal(750m, reloaded!.Price);
     }
 }
