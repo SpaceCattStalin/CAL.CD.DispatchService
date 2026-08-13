@@ -1,4 +1,5 @@
 using Application.Dispatches;
+using Application.UnitTests.TestHelpers;
 using Castle.Core.Logging;
 using Domain;
 using FluentValidation;
@@ -53,6 +54,28 @@ public class DispatchServiceTests
         mockCurrentUser.Setup(u => u.UserId).Returns(defaultShipperId);
         return new DispatchService(mockDb.Object, mockLogger.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockUpdateValidator.Object, mockCurrentUser.Object);
     }
+
+    // Methods below need real Include()/FirstOrDefaultAsync() query support that
+    // Mock<DbSet<T>> cannot provide, so they run against a real (InMemory) IApplicationDbContext.
+    private DispatchService CreateService(IApplicationDbContext db)
+    {
+        mockCurrentUser.Setup(u => u.UserId).Returns(defaultShipperId);
+        return new DispatchService(db, mockLogger.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockUpdateValidator.Object, mockCurrentUser.Object);
+    }
+
+    private static Stop MakePickupStop() => Stop.Create(1,
+        "12345 Main Accord Street", "Warehouse A", "John Doe", "555-1234-678", "john@example.com");
+
+    private static Stop MakeDropoffStop() => Stop.Create(2,
+        "45678 Oak Accord Street", "Warehouse B", "Jane Doe", "555-5678-123", "jane@example.com");
+
+    private static Dispatch MakeDispatch(Guid shipperId, Guid carrierId, Stop pickupStop, Stop dropoffStop) =>
+        Dispatch.Create(shipperId, carrierId, 500m, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2),
+            "Test dispatch", pickupStop, dropoffStop,
+            new (string? Vin, int Year, string Make, string Model, string? Color)[]
+            {
+                ("1HGCM82633A123", 2020, "Honda", "Accord", "Blue")
+            });
 
     [Fact]
     public async Task CreateAsync_InvalidRequest_ThrowsValidationException_AndDoesNotSave()
@@ -121,5 +144,49 @@ public class DispatchServiceTests
         await service.CreateAsync(request);
 
         mockValidator.Verify(v => v.ValidateAsync(request, default), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetById_ExistingDispatchWithChildren_ReturnsFullyMappedResponse()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        var companyId = Guid.NewGuid();
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            var dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            var driver = User.CreateUser(companyId, "John", "Doe", "555-000-1111",
+                "john.doe@example.com", "jdoe", "hash", UserRole.Driver);
+
+            dispatch.Drivers.Add(new DispatchDriver { DispatchId = dispatch.DispatchId, DriverId = driver.UserId });
+
+            seedDb.Dispatches.Add(dispatch);
+            seedDb.Users.Add(driver);
+            await seedDb.SaveChangesAsync();
+
+            using var db = InMemoryDbContextFactory.Create(dbName);
+            var service = CreateService(db);
+
+            var response = await service.GetByIdAsync(dispatch.DispatchId);
+
+            Assert.Equal(dispatch.DispatchId, response.DispatchId);
+            Assert.Equal("12345 Main Accord Street", response.PickupStop!.Address);
+            Assert.Equal("45678 Oak Accord Street", response.DropoffStop!.Address);
+            Assert.Single(response.Vehicles);
+            Assert.Equal("Honda", response.Vehicles.Single().Make);
+            var responseDriver = Assert.Single(response.Drivers);
+            Assert.Equal("John", responseDriver.FirstName);
+            Assert.Equal("Doe", responseDriver.LastName);
+        }
+    }
+
+    [Fact]
+    public async Task GetById_UnknownId_ThrowsKeyNotFoundException()
+    {
+        using var db = InMemoryDbContextFactory.Create();
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.GetByIdAsync(Guid.NewGuid()));
     }
 }
