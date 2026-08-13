@@ -189,4 +189,90 @@ public class DispatchServiceTests
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.GetByIdAsync(Guid.NewGuid()));
     }
+
+    [Fact]
+    public async Task GetBatch_InvalidRequest_ThrowsValidationException()
+    {
+        var request = new GetDispatchBatchRequest(Array.Empty<Guid>());
+        mockBatchValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(FailedValidationResult());
+        using var db = InMemoryDbContextFactory.Create();
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<ValidationException>(() => service.GetBatchAsync(request));
+    }
+
+    [Fact]
+    public async Task GetBatch_AllFound_ReturnsAllInFoundNoneInNotFound()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch1;
+        Dispatch dispatch2;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch1 = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            dispatch2 = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.AddRange(dispatch1, dispatch2);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var request = new GetDispatchBatchRequest(new[] { dispatch1.DispatchId, dispatch2.DispatchId });
+        mockBatchValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using var db = InMemoryDbContextFactory.Create(dbName);
+        var service = CreateService(db);
+
+        var response = await service.GetBatchAsync(request);
+
+        Assert.Equal(2, response.Found.Count());
+        Assert.Empty(response.NotFound);
+        Assert.Contains(response.Found, d => d.DispatchId == dispatch1.DispatchId);
+        Assert.Contains(response.Found, d => d.DispatchId == dispatch2.DispatchId);
+    }
+
+    [Fact]
+    public async Task GetBatch_MixedFoundAndNotFound_ReturnsCorrectSplit()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        var unknownId = Guid.NewGuid();
+        Dispatch dispatch1;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch1 = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            seedDb.Dispatches.Add(dispatch1);
+            await seedDb.SaveChangesAsync();
+        }
+
+        var request = new GetDispatchBatchRequest(new[] { dispatch1.DispatchId, unknownId });
+        mockBatchValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using var db = InMemoryDbContextFactory.Create(dbName);
+        var service = CreateService(db);
+
+        var response = await service.GetBatchAsync(request);
+
+        var found = Assert.Single(response.Found);
+        Assert.Equal(dispatch1.DispatchId, found.DispatchId);
+        var notFound = Assert.Single(response.NotFound);
+        Assert.Equal(unknownId, notFound);
+    }
+
+    [Fact]
+    public async Task GetBatch_AllNotFound_ReturnsAllInNotFound()
+    {
+        var requestedIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+        var request = new GetDispatchBatchRequest(requestedIds);
+        mockBatchValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        using var db = InMemoryDbContextFactory.Create();
+        var service = CreateService(db);
+
+        var response = await service.GetBatchAsync(request);
+
+        Assert.Empty(response.Found);
+        Assert.Equal(requestedIds, response.NotFound.ToArray());
+    }
 }
