@@ -428,4 +428,80 @@ public class DispatchServiceTests
         var reloaded = await verifyDb.Dispatches.Include(d => d.Drivers).FirstAsync(d => d.DispatchId == dispatch.DispatchId);
         Assert.Single(reloaded.Drivers);
     }
+
+    [Fact]
+    public async Task Delete_UnknownDispatch_ThrowsKeyNotFoundException()
+    {
+        using var db = InMemoryDbContextFactory.Create();
+        var service = CreateService(db);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.DeleteAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task Delete_AlreadyDelivered_ThrowsValidationException_NothingRemoved()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            dispatch = MakeDispatch(defaultShipperId, carrierId, MakePickupStop(), MakeDropoffStop());
+            dispatch.UpdateStatus(DispatchStatus.Delivered);
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            await Assert.ThrowsAsync<ValidationException>(() => service.DeleteAsync(dispatch.DispatchId));
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches.Include(d => d.Vehicles).FirstAsync(d => d.DispatchId == dispatch.DispatchId);
+        Assert.Equal(DispatchStatus.Delivered, reloaded.DispatchStatus);
+        Assert.NotEmpty(reloaded.Vehicles);
+    }
+
+    [Fact]
+    public async Task Delete_Valid_CancelsAndRemovesStops()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var carrierId = Guid.NewGuid();
+        Dispatch dispatch;
+        Guid pickupStopId;
+        Guid dropoffStopId;
+
+        using (var seedDb = InMemoryDbContextFactory.Create(dbName))
+        {
+            var pickupStop = MakePickupStop();
+            var dropoffStop = MakeDropoffStop();
+            pickupStopId = pickupStop.StopId;
+            dropoffStopId = dropoffStop.StopId;
+
+            dispatch = MakeDispatch(defaultShipperId, carrierId, pickupStop, dropoffStop);
+            seedDb.Dispatches.Add(dispatch);
+            await seedDb.SaveChangesAsync();
+        }
+
+        using (var db = InMemoryDbContextFactory.Create(dbName))
+        {
+            var service = CreateService(db);
+            await service.DeleteAsync(dispatch.DispatchId);
+        }
+
+        using var verifyDb = InMemoryDbContextFactory.Create(dbName);
+        var reloaded = await verifyDb.Dispatches
+            .Include(d => d.Vehicles)
+            .Include(d => d.Drivers)
+            .FirstAsync(d => d.DispatchId == dispatch.DispatchId);
+
+        Assert.Equal(DispatchStatus.Canceled, reloaded.DispatchStatus);
+        Assert.Empty(reloaded.Vehicles);
+        Assert.Empty(reloaded.Drivers);
+        Assert.Null(await verifyDb.Stops.FindAsync(pickupStopId));
+        Assert.Null(await verifyDb.Stops.FindAsync(dropoffStopId));
+    }
 }
