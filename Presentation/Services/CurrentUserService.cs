@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Application;
+using Application.Interfaces;
 
 namespace Presentation.Services;
 

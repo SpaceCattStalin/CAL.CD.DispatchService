@@ -1,4 +1,4 @@
-namespace Application;
+namespace Application.Auth;
 
 public static class CustomClaimTypes
 {

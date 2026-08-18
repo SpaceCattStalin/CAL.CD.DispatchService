@@ -1,4 +1,5 @@
 using Application;
+using Application.Interfaces;
 using Domain;
 using FluentValidation;
 using FluentValidation.Results;

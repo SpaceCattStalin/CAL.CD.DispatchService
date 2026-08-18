@@ -1,4 +1,5 @@
 using Application;
+using Application.Auth;
 using Application.Dispatches;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -2,6 +2,8 @@ using System.Text;
 using Application;
 using Application.Auth;
 using Application.Dispatches;
+using Application.Dispatches.Validator;
+using Application.Interfaces;
 using DotNetEnv;
 using FluentValidation;
 using Infrastructure;
