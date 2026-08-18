@@ -1,4 +1,4 @@
-using Application;
+using Application.Events;
 using Application.Interfaces;
 using Domain;
 using FluentValidation;
@@ -16,6 +16,7 @@ public class DispatchService
     private readonly IValidator<GetDispatchBatchRequest> _batchValidator;
     private readonly IValidator<AssignDriverRequest> _assignDriverValidator;
     private readonly IValidator<UpdateDispatchRequest> _updateValidator;
+    private readonly IEventPublisher _eventPublisher;
     private readonly ICurrentUserService _currentUser;
 
     public DispatchService(
@@ -25,6 +26,7 @@ public class DispatchService
         IValidator<GetDispatchBatchRequest> batchValidator,
         IValidator<AssignDriverRequest> assignDriverValidator,
         IValidator<UpdateDispatchRequest> updateValidator,
+        IEventPublisher eventPublisher,
         ICurrentUserService currentUser)
     {
         _db = db;
@@ -33,6 +35,7 @@ public class DispatchService
         _batchValidator = batchValidator;
         _assignDriverValidator = assignDriverValidator;
         _updateValidator = updateValidator;
+        _eventPublisher = eventPublisher;
         _currentUser = currentUser;
     }
 
@@ -43,6 +46,9 @@ public class DispatchService
             throw new ValidationException(result.Errors);
 
         var dispatch = DispatchMapper.ToDomain(request, _currentUser.UserId);
+
+        // Publish message to an existing topic running in a LocalStack container
+        await _eventPublisher.Publish(new DispatchWriterEvent(EventType.Create, dispatch.DispatchId));
 
         _db.Dispatches.Add(dispatch);
         await _db.SaveChangesAsync();
@@ -57,9 +63,6 @@ public class DispatchService
     // provider + Infrastructure project reference once those are in place.
     public async Task<DispatchResponse> GetByIdAsync(Guid dispatchId)
     {
-        // TODO: scope to the current user's company (ShipperId/CarrierId) once
-        // ICurrentUserService exposes CompanyId - currently any authorized
-        // caller can fetch any dispatch by id.
         var dispatch = await _db.Dispatches
             .Include(d => d.PickupStop)
             .Include(d => d.DropoffStop)
@@ -165,7 +168,6 @@ public class DispatchService
         await _db.SaveChangesAsync();
     }
 
-    // TODO: unit tests deferred - same InMemory/User-construction blockers as GetByIdAsync.
     public async Task<DispatchResponse> UpdateAsync(Guid dispatchId, UpdateDispatchRequest request)
     {
         var result = await _updateValidator.ValidateAsync(request);
@@ -188,7 +190,7 @@ public class DispatchService
         // List of vehicle id in request
         var requestedVehicleIds = request.Vehicles
             .Select(v => v.VehicleId);
-        
+
         // List of vehicle id in current database
         var storedVehicleIds = _db.Vehicles.Select(v => v.VehicleId);
 
@@ -201,7 +203,7 @@ public class DispatchService
 
             vehicle.UpdateDetails(item.Vin, item.Color, item.Year, item.Make, item.Model);
         }
-        
+
         // Delete vehicle where requestVehicleIds do not contain storedVehicleIds
         var vehiclesToRemove = dispatch.Vehicles.Where(v => !requestedVehicleIds.Contains(v.VehicleId)).ToList();
         foreach (var vehicle in vehiclesToRemove)
