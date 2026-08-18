@@ -1,5 +1,5 @@
 using FluentValidation;
-namespace Application.Dispatches;
+namespace Application.Dispatches.Validator;
 
 public class GetDispatchBatchRequestValidator : AbstractValidator<GetDispatchBatchRequest>
 {
