@@ -7,6 +7,7 @@ using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Microsoft.Extensions.Logging;
+using Application.Interfaces;
 
 namespace Application.UnitTests.Dispatches;
 

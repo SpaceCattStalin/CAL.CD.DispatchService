@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Text;
 using Application;
+using Application.Auth;
+using Application.Interfaces;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;

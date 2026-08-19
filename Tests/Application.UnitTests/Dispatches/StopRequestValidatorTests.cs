@@ -1,6 +1,8 @@
 namespace Application.UnitTests.Dispatches;
 
 using Application.Dispatches;
+using Application.Dispatches.Validator;
+
 
 public class StopRequestValidatorTests
 {

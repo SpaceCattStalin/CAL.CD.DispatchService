@@ -1,4 +1,6 @@
-namespace Application;
+using Application.Auth;
+
+namespace Application.Interfaces;
 
 public interface IJwtTokenGenerator
 {

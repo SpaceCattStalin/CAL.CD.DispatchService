@@ -1,4 +1,5 @@
 using Application.Dispatches;
+using Application.Dispatches.Validator;
 
 namespace Application.UnitTests.Dispatches;
 
