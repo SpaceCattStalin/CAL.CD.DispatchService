@@ -1,4 +1,6 @@
 using System.Text;
+using Amazon.Runtime;
+using Amazon.SimpleNotificationService;
 using Application;
 using Application.Auth;
 using Application.Dispatches;
@@ -9,7 +11,6 @@ using FluentValidation;
 using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -21,93 +22,27 @@ Env.Load(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Paste the raw JWT from POST /auth/login (no 'Bearer ' prefix -- Swagger adds that automatically)."
-    });
+builder.Services.AddSwaggerGen();
 
-    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    {
-        { new OpenApiSecuritySchemeReference("Bearer", document), new List<string>() }
-    });
-});
+// Extension method for configurate database provider
+builder.Services.AddDbConfiguration(builder.Configuration);
 
-builder.Services.AddControllers();
+// Extension method for configurate authentication and authorization
+builder.Services.AddAuthenticationAndAuthorizeConfiguration(builder.Configuration);
 
-var connectionString = builder.Configuration.GetConnectionString("DbConnection") ?? throw new InvalidOperationException("Connection string was not found."); ;
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseNpgsql(connectionString);
-});
-builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+// Extension method for configurate the global exception catching middleware
+builder.Services.AddCustomExceptionMiddleWareConfiguration();
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
-builder.Services.AddScoped<IValidator<CreateDispatchRequest>, CreateDispatchRequestValidator>();
-builder.Services.AddScoped<IValidator<GetDispatchBatchRequest>, GetDispatchBatchRequestValidator>();
-builder.Services.AddScoped<IValidator<AssignDriverRequest>, AssignDriverRequestValidator>();
-builder.Services.AddScoped<IValidator<UpdateDispatchRequest>, UpdateDispatchRequestValidator>();
+// Extension method for configurate validators
+builder.Services.AddValidatorConfiguration();
+
+// Extension method for configurate cloud infrastructure
+builder.Services.AddCloudInfrastructureConfiguration(builder.Configuration);
+
 builder.Services.AddScoped<DispatchService>();
 
-builder.Services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>();
-builder.Services.AddScoped<AuthService>();
-
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
-builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-
-var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
-    ?? throw new InvalidOperationException("Jwt settings were not found.");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidateAudience = true,
-            ValidAudience = jwtSettings.Audience,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SigningKey)),
-            ValidateLifetime = true
-        };
-    });
-
-builder.Services.AddSingleton<IAuthorizationHandler>(new PermissionAuthorizationRequirement());
-
-builder.Services.AddAuthorization(options =>
-{
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
-
-    foreach (var permission in PermissionNames.All)
-    {
-        options.AddPolicy(permission, policy =>
-            policy.Requirements.Add(new PermissionAuthorizationRequirement(permission)));
-    }
-});
-
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-
-builder.Services.AddProblemDetails(options =>
-{
-    options.CustomizeProblemDetails = context =>
-    {
-        context.ProblemDetails.Instance = context.HttpContext.Request.Path;
-        context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
-        context.ProblemDetails.Extensions["timestamp"] = DateTime.UtcNow;
-        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
-    };
-});
+builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
