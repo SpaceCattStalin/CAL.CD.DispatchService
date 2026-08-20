@@ -48,7 +48,14 @@ public class DispatchService
         var dispatch = DispatchMapper.ToDomain(request, _currentUser.UserId);
 
         // Publish message to an existing topic running in a LocalStack container
-        await _eventPublisher.Publish(new DispatchWriterEvent(EventType.Create, dispatch.DispatchId));
+        await _eventPublisher.Publish(new DispatchWriterEvent(
+            EventType.Create,
+            dispatch.DispatchId,
+            dispatch.Price,
+            dispatch.PickupDate,
+            dispatch.DropoffDate,
+            dispatch.DispatchStatus,
+            dispatch.Vehicles.Select(v => new DispatchWriterVehicle(v.Vin))));
 
         _db.Dispatches.Add(dispatch);
         await _db.SaveChangesAsync();
@@ -56,11 +63,6 @@ public class DispatchService
         return DispatchMapper.ToResponse(dispatch);
     }
 
-    // TODO: unit tests deferred - Include()/FirstOrDefaultAsync() need a real
-    // query provider (Mock<DbSet<T>> can't fake Include or async LINQ), and
-    // covering Drivers mapping needs a way to construct a User in test code
-    // (no public constructor/factory exists yet). Revisit with EF InMemory
-    // provider + Infrastructure project reference once those are in place.
     public async Task<DispatchResponse> GetByIdAsync(Guid dispatchId)
     {
         var dispatch = await _db.Dispatches
@@ -77,7 +79,6 @@ public class DispatchService
         return DispatchMapper.ToDispatchResponse(dispatch);
     }
 
-    // TODO: unit tests deferred - same InMemory/User-construction blockers as GetByIdAsync.
     public async Task<GetDispatchBatchResponse> GetBatchAsync(GetDispatchBatchRequest request)
     {
         var result = await _batchValidator.ValidateAsync(request);
@@ -103,7 +104,6 @@ public class DispatchService
             notFound);
     }
 
-    // TODO: unit tests deferred - same InMemory/User-construction blockers as GetByIdAsync.
     public async Task AssignDriverAsync(Guid dispatchId, AssignDriverRequest request)
     {
         var result = await _assignDriverValidator.ValidateAsync(request);
@@ -138,7 +138,6 @@ public class DispatchService
         await _db.SaveChangesAsync();
     }
 
-    // TODO: unit tests deferred - same InMemory/User-construction blockers as GetByIdAsync.
     public async Task DeleteAsync(Guid dispatchId)
     {
         var dispatch = await _db.Dispatches
@@ -164,6 +163,9 @@ public class DispatchService
             _db.Stops.Remove(pickupStop);
         if (dropoffStop is not null)
             _db.Stops.Remove(dropoffStop);
+
+        // Publish message to an existing topic running in a LocalStack container
+        await _eventPublisher.Publish(new DispatchDeleteEvent(EventType.Delete, dispatch.DispatchId));
 
         await _db.SaveChangesAsync();
     }

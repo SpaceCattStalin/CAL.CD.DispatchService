@@ -8,13 +8,22 @@ namespace Infrastructure;
 
 public class SnsEventPublisher(IAmazonSimpleNotificationService sns, IConfiguration configuration) : IEventPublisher
 {
-
     public async Task Publish(DispatchWriterEvent writerEvent)
     {
         var topicArn = configuration["Sns:TopicArn"]
             ?? throw new InvalidOperationException("Sns:TopicArn was not found.");
 
-        string message = JsonSerializer.Serialize<DispatchWriterEvent>(writerEvent);
+        string message = JsonSerializer.Serialize(writerEvent);
+
+        await sns.PublishAsync(topicArn, message);
+    }
+
+    public async Task Publish(DispatchDeleteEvent deleteEvent)
+    {
+        var topicArn = configuration["Sns:TopicArn"]
+            ?? throw new InvalidOperationException("Sns:TopicArn was not found.");
+
+        string message = JsonSerializer.Serialize(deleteEvent);
 
         await sns.PublishAsync(topicArn, message);
     }

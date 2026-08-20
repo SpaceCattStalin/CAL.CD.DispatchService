@@ -1,21 +1,6 @@
-using System.Text;
-using Amazon.Runtime;
-using Amazon.SimpleNotificationService;
-using Application;
-using Application.Auth;
 using Application.Dispatches;
-using Application.Dispatches.Validator;
-using Application.Interfaces;
 using DotNetEnv;
-using FluentValidation;
-using Infrastructure;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using Presentation;
-using Presentation.Services;
 
 Env.Load(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
 
