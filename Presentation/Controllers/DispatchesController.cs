@@ -41,6 +41,14 @@ public class DispatchesController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet]
+    [Authorize(Policy = PermissionNames.DispatchesRead)]
+    public async Task<IActionResult> GetPaged([FromQuery] string? cursor, [FromQuery] int limit = 500)
+    {
+        var response = await _dispatchService.GetPagedAsync(new GetDispatchesPagedRequest(cursor, limit));
+        return Ok(response);
+    }
+
     [HttpPost("{dispatchId}/assign-driver")]
     [Authorize(Policy = PermissionNames.DispatchesUpdate)]
     public async Task<IActionResult> AssignDriver(Guid dispatchId, AssignDriverRequest request)
