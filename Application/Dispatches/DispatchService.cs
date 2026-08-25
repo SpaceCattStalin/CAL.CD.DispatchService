@@ -113,7 +113,6 @@ public class DispatchService
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
 
-        // TODO: implement the keyset-paginated query here, e.g.:
         //   - parse request.Cursor as a Guid (treat null/empty as "start from the beginning")
         Guid? cursor = string.IsNullOrEmpty(request.Cursor) ? null : Guid.Parse(request.Cursor);
 
