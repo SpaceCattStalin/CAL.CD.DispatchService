@@ -9,9 +9,9 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Infrastructure;
 
-public class JwtTokenGenerator(IOptions<JwtSettings> settings) : IJwtTokenGenerator
+public class JwtTokenGenerator(IOptions<AppSettings> appSettings) : IJwtTokenGenerator
 {
-    private readonly JwtSettings _settings = settings.Value;
+    private readonly JwtSettings _settings = appSettings.Value.Jwt;
 
     public JwtToken GenerateToken(Guid userId, string userName, string roleName, IEnumerable<string> permissions)
     {

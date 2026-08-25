@@ -36,9 +36,6 @@ public class AuthService
             .Include(r => r.RolePermissions).ThenInclude(rp => rp.Permission)
             .SingleOrDefaultAsync(r => r.Name == roleName);
 
-        if (role is null)
-            throw new InvalidOperationException($"No role seeded for '{roleName}'");
-
         var permissions = role.RolePermissions.Select(rp => rp.Permission.Name);
         var token = _tokenGenerator.GenerateToken(user.UserId, user.UserName, roleName, permissions);
 

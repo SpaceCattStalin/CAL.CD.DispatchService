@@ -1,19 +1,22 @@
 using Application.Dispatches;
-using DotNetEnv;
+using Infrastructure;
 using Presentation;
-
-Env.Load(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddOptions<AppSettings>()
+    .Bind(builder.Configuration)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 // Extension method for configurate database provider
-builder.Services.AddDbConfiguration(builder.Configuration);
+builder.Services.AddDbConfiguration();
 
 // Extension method for configurate authentication and authorization
-builder.Services.AddAuthenticationAndAuthorizeConfiguration(builder.Configuration);
+builder.Services.AddAuthenticationAndAuthorizeConfiguration();
 
 // Extension method for configurate the global exception catching middleware
 builder.Services.AddCustomExceptionMiddleWareConfiguration();
@@ -22,7 +25,7 @@ builder.Services.AddCustomExceptionMiddleWareConfiguration();
 builder.Services.AddValidatorConfiguration();
 
 // Extension method for configurate cloud infrastructure
-builder.Services.AddCloudInfrastructureConfiguration(builder.Configuration);
+builder.Services.AddCloudInfrastructureConfiguration();
 
 builder.Services.AddScoped<DispatchService>();
 
