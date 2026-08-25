@@ -7,11 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace Presentation.Controllers;
 
 [ApiController]
-[Route("dispatch")]
+[Route("api/dispatch")]
 public class DispatchesController : ControllerBase
 {
     private readonly DispatchService _dispatchService;
-
     public DispatchesController(DispatchService dispatchService)
     {
         _dispatchService = dispatchService;
@@ -22,7 +21,7 @@ public class DispatchesController : ControllerBase
     public async Task<IActionResult> Create(CreateDispatchRequest request)
     {
         var response = await _dispatchService.CreateAsync(request);
-        return Created($"/dispatch/{response.DispatchId}", response);
+        return Created($"/api/dispatch/{response.DispatchId}", response);
     }
 
     [HttpGet("{dispatchId}")]
