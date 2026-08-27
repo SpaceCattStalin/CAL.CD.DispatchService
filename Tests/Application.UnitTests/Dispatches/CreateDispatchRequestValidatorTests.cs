@@ -47,7 +47,8 @@ public class CreateDispatchRequestValidatorTests
     [Fact]
     public void Validate_EmptyCarrierId_IsInvalid()
     {
-        var request = ValidRequest() with { CarrierId = Guid.Empty };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(Guid.Empty, baseRequest.Price, baseRequest.PickupDate, baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         var result = validator.Validate(request);
 
@@ -58,7 +59,8 @@ public class CreateDispatchRequestValidatorTests
     [Fact]
     public void Validate_PriceZero_IsInvalid()
     {
-        var request = ValidRequest() with { Price = 0 };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, 0, baseRequest.PickupDate, baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         var result = validator.Validate(request);
 
@@ -69,7 +71,8 @@ public class CreateDispatchRequestValidatorTests
     [Fact]
     public void Validate_SmallestPositivePrice_IsValid()
     {
-        var request = ValidRequest() with { Price = 0.01m };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, 0.01m, baseRequest.PickupDate, baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
         var result = validator.Validate(request);
         Assert.True(result.IsValid);
     }
@@ -77,7 +80,8 @@ public class CreateDispatchRequestValidatorTests
     [Fact]
     public void Validate_PriceNegative_IsInvalid()
     {
-        var request = ValidRequest() with { Price = -100 };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, -100, baseRequest.PickupDate, baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         var result = validator.Validate(request);
 
@@ -88,7 +92,8 @@ public class CreateDispatchRequestValidatorTests
     [Fact]
     public void Validate_PickupDateInPast_IsInvalid()
     {
-        var request = ValidRequest() with { PickupDate = DateTime.UtcNow.AddDays(-10) };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, DateTime.UtcNow.AddDays(-10), baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         var result = validator.Validate(request);
 
@@ -99,7 +104,8 @@ public class CreateDispatchRequestValidatorTests
     [Fact]
     public void Validate_PickupDateNow_Valid()
     {
-        var request = ValidRequest() with { PickupDate = DateTime.UtcNow };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, DateTime.UtcNow, baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         var result = validator.Validate(request);
 
@@ -111,7 +117,8 @@ public class CreateDispatchRequestValidatorTests
     public void Validate_PickupDateInFuture_IsValid()
     {
         var pickup = DateTime.UtcNow.AddDays(10);
-        var request = ValidRequest() with { PickupDate = pickup, DropoffDate = pickup.AddDays(1) };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, pickup, pickup.AddDays(1), baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         var result = validator.Validate(request);
 
@@ -125,7 +132,8 @@ public class CreateDispatchRequestValidatorTests
     {
         var pickup = DateTime.UtcNow.AddDays(2 + pickupOffsetDays);
         var dropoff = pickup.AddHours(dropoffOffsetHoursFromPickup);
-        var request = ValidRequest() with { PickupDate = pickup, DropoffDate = dropoff };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, pickup, dropoff, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
         var result = validator.Validate(request);
         Assert.False(result.IsValid);
     }
@@ -133,7 +141,8 @@ public class CreateDispatchRequestValidatorTests
     [Fact]
     public void Validate_DropoffAfterPickupAndNow_IsValid()
     {
-        var request = ValidRequest() with { PickupDate = DateTime.UtcNow.AddDays(1), DropoffDate = DateTime.UtcNow.AddDays(2) };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, DateTime.UtcNow.AddDays(1), DateTime.UtcNow.AddDays(2), baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
         var result = validator.Validate(request);
         Assert.True(result.IsValid);
     }
@@ -143,7 +152,8 @@ public class CreateDispatchRequestValidatorTests
     [InlineData(501, false)]
     public void Validate_DescriptionLength_RespectsMaxLength(int length, bool expectedValid)
     {
-        var request = ValidRequest() with { Description = new string('a', length) };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, baseRequest.PickupDate, baseRequest.DropoffDate, new string('a', length), baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         var result = validator.Validate(request);
 
@@ -153,7 +163,8 @@ public class CreateDispatchRequestValidatorTests
     [Fact]
     public void Validate_NullDescription_IsValid()
     {
-        var request = ValidRequest() with { Description = null };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, baseRequest.PickupDate, baseRequest.DropoffDate, null, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
         var result = validator.Validate(request);
         Assert.True(result.IsValid);
     }
@@ -163,7 +174,8 @@ public class CreateDispatchRequestValidatorTests
     [InlineData(12)]
     public void Validate_VehicleCountWithinRange_IsValid(int count)
     {
-        var request = ValidRequest() with { Vehicles = MakeVehicleRequest(count) };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, baseRequest.PickupDate, baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, MakeVehicleRequest(count));
 
         var result = validator.Validate(request);
 
@@ -175,7 +187,8 @@ public class CreateDispatchRequestValidatorTests
     [InlineData(13)]
     public void Validate_VehicleCountOutOfRange_IsValid(int count)
     {
-        var request = ValidRequest() with { Vehicles = MakeVehicleRequest(count) };
+        var baseRequest = ValidRequest();
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, baseRequest.PickupDate, baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, MakeVehicleRequest(count));
 
         var result = validator.Validate(request);
 

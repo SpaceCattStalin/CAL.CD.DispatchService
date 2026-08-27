@@ -1,4 +1,7 @@
 namespace Application.Dispatches;
 
-public record GetDispatchBatchRequest(
-    IEnumerable<Guid> DispatchIds);
+public class GetDispatchBatchRequest(
+    IEnumerable<Guid> DispatchIds)
+{
+    public IEnumerable<Guid> DispatchIds { get; init; } = DispatchIds;
+}

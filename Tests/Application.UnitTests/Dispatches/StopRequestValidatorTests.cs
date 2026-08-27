@@ -36,7 +36,8 @@ public class StopRequestValidatorTests
     [InlineData(100)]
     public void Validate_AddressLengthWithinRange_IsValid(int length)
     {
-        var request = ValidRequest() with { Address = new string('a', length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(new string('a', length), baseRequest.LocationName, baseRequest.ContactName, baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -48,7 +49,8 @@ public class StopRequestValidatorTests
     [InlineData(101)]
     public void Validate_AddressLengthOutOfRange_IsInvalid(int length)
     {
-        var request = ValidRequest() with { Address = new string('a', length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(new string('a', length), baseRequest.LocationName, baseRequest.ContactName, baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -61,7 +63,8 @@ public class StopRequestValidatorTests
     [InlineData("   ")]
     public void Validate_AddressEmpty_IsInvalid(string? address)
     {
-        var request = ValidRequest() with { Address = address! };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(address!, baseRequest.LocationName, baseRequest.ContactName, baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -71,7 +74,8 @@ public class StopRequestValidatorTests
     [Fact]
     public void Validate_NullLocationName_IsValid()
     {
-        var request = ValidRequest() with { LocationName = null };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, null, baseRequest.ContactName, baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -83,7 +87,8 @@ public class StopRequestValidatorTests
     [InlineData(30)]
     public void Validate_LocationNameLengthWithinRange_IsValid(int length)
     {
-        var request = ValidRequest() with { LocationName = new string('a', length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, new string('a', length), baseRequest.ContactName, baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -95,7 +100,8 @@ public class StopRequestValidatorTests
     [InlineData(31)]
     public void Validate_LocationNameLengthOutOfRange_IsInvalid(int length)
     {
-        var request = ValidRequest() with { LocationName = new string('a', length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, new string('a', length), baseRequest.ContactName, baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -105,7 +111,8 @@ public class StopRequestValidatorTests
     [Fact]
     public void Validate_NullContactName_IsValid()
     {
-        var request = ValidRequest() with { ContactName = null };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, null, baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -117,7 +124,8 @@ public class StopRequestValidatorTests
     [InlineData(50)]
     public void Validate_ContactNameLengthWithinRange_IsValid(int length)
     {
-        var request = ValidRequest() with { ContactName = new string('a', length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, new string('a', length), baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -129,7 +137,8 @@ public class StopRequestValidatorTests
     [InlineData(51)]
     public void Validate_ContactNameLengthOutOfRange_IsInvalid(int length)
     {
-        var request = ValidRequest() with { ContactName = new string('a', length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, new string('a', length), baseRequest.ContactPhone, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -139,7 +148,8 @@ public class StopRequestValidatorTests
     [Fact]
     public void Validate_NullContactPhone_IsValid()
     {
-        var request = ValidRequest() with { ContactPhone = null };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, baseRequest.ContactName, null, baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -151,7 +161,8 @@ public class StopRequestValidatorTests
     [InlineData(12)]
     public void Validate_ContactPhoneLengthWithinRange_IsValid(int length)
     {
-        var request = ValidRequest() with { ContactPhone = new string('1', length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, baseRequest.ContactName, new string('1', length), baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -163,7 +174,8 @@ public class StopRequestValidatorTests
     [InlineData(13)]
     public void Validate_ContactPhoneLengthOutOfRange_IsInvalid(int length)
     {
-        var request = ValidRequest() with { ContactPhone = new string('1', length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, baseRequest.ContactName, new string('1', length), baseRequest.ContactEmail);
 
         var result = validator.Validate(request);
 
@@ -173,7 +185,8 @@ public class StopRequestValidatorTests
     [Fact]
     public void Validate_NullContactEmail_IsValid()
     {
-        var request = ValidRequest() with { ContactEmail = null };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, baseRequest.ContactName, baseRequest.ContactPhone, null);
 
         var result = validator.Validate(request);
 
@@ -185,7 +198,8 @@ public class StopRequestValidatorTests
     [InlineData(30)]
     public void Validate_ContactEmailLengthWithinRange_IsValid(int length)
     {
-        var request = ValidRequest() with { ContactEmail = MakeValidEmail(length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, baseRequest.ContactName, baseRequest.ContactPhone, MakeValidEmail(length));
 
         var result = validator.Validate(request);
 
@@ -197,7 +211,8 @@ public class StopRequestValidatorTests
     [InlineData(31)]
     public void Validate_ContactEmailLengthOutOfRange_IsInvalid(int length)
     {
-        var request = ValidRequest() with { ContactEmail = MakeValidEmail(length) };
+        var baseRequest = ValidRequest();
+        var request = new StopRequest(baseRequest.Address, baseRequest.LocationName, baseRequest.ContactName, baseRequest.ContactPhone, MakeValidEmail(length));
 
         var result = validator.Validate(request);
 

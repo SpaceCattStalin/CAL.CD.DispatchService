@@ -1,3 +1,7 @@
 namespace Application.Auth;
 
-public record LoginResponse(string AccessToken, DateTime ExpiresAt);
+public class LoginResponse(string AccessToken, DateTime ExpiresAt)
+{
+    public string AccessToken { get; init; } = AccessToken;
+    public DateTime ExpiresAt { get; init; } = ExpiresAt;
+}

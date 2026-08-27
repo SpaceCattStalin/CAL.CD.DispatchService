@@ -87,8 +87,9 @@ public class DispatchMapperTests
     [Fact]
     public void ToDomain_InvalidPickupStopAddress_ThrowsArgumentException()
     {
-        var invalidPickupStop = pickupStopRequest with { Address = "" };
-        var request = MakeRequest(new[] { defaultVehicleRequest }) with { PickupStop = invalidPickupStop };
+        var invalidPickupStop = new StopRequest("", pickupStopRequest.LocationName, pickupStopRequest.ContactName, pickupStopRequest.ContactPhone, pickupStopRequest.ContactEmail);
+        var baseRequest = MakeRequest(new[] { defaultVehicleRequest });
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, baseRequest.Price, baseRequest.PickupDate, baseRequest.DropoffDate, baseRequest.Description, invalidPickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         Action action = () => DispatchMapper.ToDomain(request, shipperId);
 
@@ -98,7 +99,8 @@ public class DispatchMapperTests
     [Fact]
     public void ToDomain_InvalidPrice_ThrowsArgumentOutOfRangeException()
     {
-        var request = MakeRequest(new[] { defaultVehicleRequest }) with { Price = 0 };
+        var baseRequest = MakeRequest(new[] { defaultVehicleRequest });
+        var request = new CreateDispatchRequest(baseRequest.CarrierId, 0, baseRequest.PickupDate, baseRequest.DropoffDate, baseRequest.Description, baseRequest.PickupStop, baseRequest.DropoffStop, baseRequest.Vehicles);
 
         Action action = () => DispatchMapper.ToDomain(request, shipperId);
 

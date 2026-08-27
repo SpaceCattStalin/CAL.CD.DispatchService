@@ -2,7 +2,7 @@ using Domain;
 
 namespace Application.Events;
 
-public record class DispatchWriterEvent(
+public class DispatchWriterEvent(
     EventType Type,
     Guid DispatchId,
     decimal PriceTotal,
@@ -11,4 +11,4 @@ public record class DispatchWriterEvent(
     DispatchStatus DispatchStatus,
     IEnumerable<DispatchWriterVehicle> Vehicles);
 
-public record class DispatchWriterVehicle(string? Vin);
+public class DispatchWriterVehicle(string? Vin);

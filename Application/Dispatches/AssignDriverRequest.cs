@@ -1,4 +1,7 @@
 namespace Application.Dispatches;
 
-public record AssignDriverRequest(
-    Guid DriverId);
+public class AssignDriverRequest(
+    Guid DriverId)
+{
+    public Guid DriverId { get; init; } = DriverId;
+}

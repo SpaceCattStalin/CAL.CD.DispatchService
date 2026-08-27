@@ -1,5 +1,9 @@
 namespace Application.Dispatches;
 
-public record GetDispatchBatchResponse(
+public class GetDispatchBatchResponse(
     IEnumerable<DispatchResponse> Found,
-    IEnumerable<Guid> NotFound);
+    IEnumerable<Guid> NotFound)
+{
+    public IEnumerable<DispatchResponse> Found { get; init; } = Found;
+    public IEnumerable<Guid> NotFound { get; init; } = NotFound;
+}

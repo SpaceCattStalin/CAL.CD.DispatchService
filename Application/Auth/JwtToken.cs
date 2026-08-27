@@ -1,3 +1,7 @@
 namespace Application.Auth;
 
-public record JwtToken(string AccessToken, DateTime ExpiresAt);
+public class JwtToken(string AccessToken, DateTime ExpiresAt)
+{
+    public string AccessToken { get; init; } = AccessToken;
+    public DateTime ExpiresAt { get; init; } = ExpiresAt;
+}

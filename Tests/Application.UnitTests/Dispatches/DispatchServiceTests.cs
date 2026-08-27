@@ -43,6 +43,7 @@ public class DispatchServiceTests
     private readonly Mock<IValidator<GetDispatchBatchRequest>> mockBatchValidator = new();
     private readonly Mock<IValidator<AssignDriverRequest>> mockAssignDriverValidator = new();
     private readonly Mock<IValidator<UpdateDispatchRequest>> mockUpdateValidator = new();
+    private readonly Mock<IValidator<GetDispatchesPagedRequest>> mockPagedValidator = new();
     private readonly Mock<ILogger<DispatchService>> mockLogger = new();
     private readonly Mock<ICurrentUserService> mockCurrentUser = new();
     private readonly Mock<DbSet<Dispatch>> mockSet = new();
@@ -53,7 +54,7 @@ public class DispatchServiceTests
         mockDb.Setup(db => db.Dispatches).Returns(mockSet.Object);
         mockDb.Setup(db => db.SaveChangesAsync(default)).ReturnsAsync(1);
         mockCurrentUser.Setup(u => u.UserId).Returns(defaultShipperId);
-        return new DispatchService(mockDb.Object, mockLogger.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockUpdateValidator.Object, mockPublisher.Object, mockCurrentUser.Object);
+        return new DispatchService(mockDb.Object, mockLogger.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockUpdateValidator.Object, mockPagedValidator.Object, mockPublisher.Object, mockCurrentUser.Object);
     }
 
     // Methods below need real Include()/FirstOrDefaultAsync() query support that
@@ -61,7 +62,7 @@ public class DispatchServiceTests
     private DispatchService CreateService(IApplicationDbContext db)
     {
         mockCurrentUser.Setup(u => u.UserId).Returns(defaultShipperId);
-        return new DispatchService(db, mockLogger.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockUpdateValidator.Object, mockPublisher.Object, mockCurrentUser.Object);
+        return new DispatchService(db, mockLogger.Object, mockValidator.Object, mockBatchValidator.Object, mockAssignDriverValidator.Object, mockUpdateValidator.Object, mockPagedValidator.Object, mockPublisher.Object, mockCurrentUser.Object);
     }
 
     private static Stop MakePickupStop() => Stop.Create(1,
