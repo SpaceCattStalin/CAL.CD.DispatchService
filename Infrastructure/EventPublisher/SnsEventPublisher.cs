@@ -27,4 +27,15 @@ public class SnsEventPublisher(IAmazonSimpleNotificationService sns, IConfigurat
 
         await sns.PublishAsync(topicArn, message);
     }
+
+    public async Task Publish(DispatchUpdateEvent updateEvent)
+    {
+        var topicArn = configuration["Sns:TopicArn"]
+               ?? throw new InvalidOperationException("Sns:TopicArn was not found.");
+
+        string messages = JsonSerializer.Serialize(updateEvent);
+
+        await sns.PublishAsync(topicArn, messages);
+    }
+
 }

@@ -226,6 +226,16 @@ public class DispatchService
 
         dispatch.UpdateDetails(request.Price, request.PickupDate, request.DropoffDate, request.Description);
 
+        // Publish message to an existing topic running in a LocalStack container
+        await _eventPublisher.Publish(new DispatchUpdateEvent(
+            EventType.Update,
+            dispatch.DispatchId,
+            dispatch.Price,
+            dispatch.PickupDate,
+            dispatch.DropoffDate,
+            dispatch.DispatchStatus,
+            dispatch.Vehicles.Select(v => new DispatchUpdateVehicle(v.Vin))));
+
         await _db.SaveChangesAsync();
 
         return DispatchMapper.ToDispatchResponse(dispatch);
