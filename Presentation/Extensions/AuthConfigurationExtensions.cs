@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Presentation.Services;
 
@@ -11,29 +12,30 @@ namespace Presentation;
 
 public static class AuthConfigurationExtensions
 {
-    public static IServiceCollection AddAuthenticationAndAuthorizeConfiguration(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddAuthenticationAndAuthorizeConfiguration(this IServiceCollection services)
     {
         services.AddScoped<AuthService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
 
-        services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
-        var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>()
-            ?? throw new InvalidOperationException("Jwt settings were not found.");
-
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
+            .AddJwtBearer();
+
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<IOptions<AppSettings>>((options, appSettings) =>
             {
+                var jwt = appSettings.Value.Jwt;
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = jwtSettings.Issuer,
+                    ValidIssuer = jwt.Issuer,
                     ValidateAudience = true,
-                    ValidAudience = jwtSettings.Audience,
+                    ValidAudience = jwt.Audience,
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SigningKey)),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
                     ValidateLifetime = true
                 };
             });

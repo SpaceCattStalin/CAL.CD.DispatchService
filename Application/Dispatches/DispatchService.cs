@@ -16,6 +16,7 @@ public class DispatchService
     private readonly IValidator<GetDispatchBatchRequest> _batchValidator;
     private readonly IValidator<AssignDriverRequest> _assignDriverValidator;
     private readonly IValidator<UpdateDispatchRequest> _updateValidator;
+    private readonly IValidator<GetDispatchesPagedRequest> _pagedValidator;
     private readonly IEventPublisher _eventPublisher;
     private readonly ICurrentUserService _currentUser;
 
@@ -26,6 +27,7 @@ public class DispatchService
         IValidator<GetDispatchBatchRequest> batchValidator,
         IValidator<AssignDriverRequest> assignDriverValidator,
         IValidator<UpdateDispatchRequest> updateValidator,
+        IValidator<GetDispatchesPagedRequest> pagedValidator,
         IEventPublisher eventPublisher,
         ICurrentUserService currentUser)
     {
@@ -35,6 +37,7 @@ public class DispatchService
         _batchValidator = batchValidator;
         _assignDriverValidator = assignDriverValidator;
         _updateValidator = updateValidator;
+        _pagedValidator = pagedValidator;
         _eventPublisher = eventPublisher;
         _currentUser = currentUser;
     }
@@ -102,6 +105,39 @@ public class DispatchService
         return new GetDispatchBatchResponse(
             dispatches.Select(DispatchMapper.ToDispatchResponse),
             notFound);
+    }
+
+    public async Task<PageResponseWithCursor<DispatchWriterDto>> GetPagedAsync(GetDispatchesPagedRequest request)
+    {
+        var result = await _pagedValidator.ValidateAsync(request);
+        if (!result.IsValid)
+            throw new ValidationException(result.Errors);
+
+        //   - parse request.Cursor as a Guid (treat null/empty as "start from the beginning")
+        Guid? cursor = string.IsNullOrEmpty(request.Cursor) ? null : Guid.Parse(request.Cursor);
+
+        IQueryable<Dispatch> query = _db.Dispatches.Include(d => d.Vehicles);
+
+        //   - filter: DispatchId > cursor
+        if (cursor.HasValue)
+            query = query.Where(d => d.DispatchId > cursor.Value);
+
+        //   - order by DispatchId ascending (stable, unique order — required for keyset pagination)
+        query = query
+            .OrderBy(d => d.DispatchId)
+            .Take(request.Limit);
+
+        var dispatches = await query.ToListAsync();
+        //   - map each Dispatch to a DispatchWriterDto
+        var items = dispatches.Select(d => new DispatchWriterDto(d.DispatchId,
+            d.Price,
+            d.PickupDate,
+            d.DropoffDate,
+            d.DispatchStatus,
+            d.Vehicles.Select(v => new DispatchWriterVehicle(v.Vin))));
+
+        return new PageResponseWithCursor<DispatchWriterDto>(items,
+            dispatches.Count == request.Limit ? dispatches.Last().DispatchId.ToString() : null);
     }
 
     public async Task AssignDriverAsync(Guid dispatchId, AssignDriverRequest request)

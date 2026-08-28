@@ -13,6 +13,7 @@ public static class ValidatorConfigurationExtensions
         services.AddScoped<IValidator<GetDispatchBatchRequest>, GetDispatchBatchRequestValidator>();
         services.AddScoped<IValidator<AssignDriverRequest>, AssignDriverRequestValidator>();
         services.AddScoped<IValidator<UpdateDispatchRequest>, UpdateDispatchRequestValidator>();
+        services.AddScoped<IValidator<GetDispatchesPagedRequest>, GetDispatchesPagedRequestValidator>();
         services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>();
 
         return services;
