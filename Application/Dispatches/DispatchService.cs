@@ -225,32 +225,38 @@ public class DispatchService
             throw new ValidationException(new[] { new ValidationFailure(
                 nameof(Dispatch.DispatchStatus), $"Cannot update a dispatch with status {dispatch.DispatchStatus}.") });
 
-        // List of vehicle id in request
+        // List of all vehicle id in request
         var requestedVehicleIds = request.Vehicles
             .Select(v => v.VehicleId);
 
-        // List of vehicle id in current database
+        // List of all vehicle id in current database
         var storedVehicleIds = _db.Vehicles.Select(v => v.VehicleId);
 
-        // Update vehicle where storedVehicleIds match requestVehicleIds
+        // Update proceed in 3 steps: update first, delete second, and create third
+        // Step 1: to update a vehicle, check if the vehicle ids of a dispatch contains 
+        // the request vehicle ids, if yes then check if the request vehicle ids belong 
+        // to another dispatch, if no then update, if yes throw error and stop this function
         foreach (var item in request.Vehicles.Where(v => storedVehicleIds.Contains(v.VehicleId)))
         {
             var vehicle = dispatch.Vehicles.FirstOrDefault(v => v.VehicleId == item.VehicleId);
             if (vehicle is null)
-                throw new ArgumentException($"VehicleId {item.VehicleId} does not belong to this dispatch.", nameof(request.Vehicles));
+                throw new ArgumentException($"VehicleId {item.VehicleId} does not belong to this dispatch.");
 
             vehicle.UpdateDetails(item.Vin, item.Color, item.Year, item.Make, item.Model);
         }
 
-        // Delete vehicle where requestVehicleIds do not contain storedVehicleIds
+        // Step 2: after update, proceed to delete any vehicle ids of a dispatch that are not 
+        // sent in the request vehicle ids
         var vehiclesToRemove = dispatch.Vehicles.Where(v => !requestedVehicleIds.Contains(v.VehicleId)).ToList();
         foreach (var vehicle in vehiclesToRemove)
             _db.Vehicles.Remove(vehicle);
 
-        // Create vehicle where storedVehicleIds do not have requestVehicleIds
+
+        // Step 3: finally for each request vehicle id that are not belong to this dispatch
+        // and not belong to any other dispatch then proceed to create new vehicle 
         foreach (var item in request.Vehicles.Where(v => !storedVehicleIds.Contains(v.VehicleId)))
         {
-            var newVehicle = Vehicle.CreateVehicle(dispatch, dispatch.PickupStop!, dispatch.DropoffStop!,
+            var newVehicle = Vehicle.CreateVehicle(dispatch, item.VehicleId, dispatch.PickupStop!, dispatch.DropoffStop!,
                 item.Vin, item.Year!.Value, item.Make!, item.Model!, item.Color);
             _db.Vehicles.Add(newVehicle);
         }
