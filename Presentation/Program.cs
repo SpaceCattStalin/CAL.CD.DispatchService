@@ -18,10 +18,8 @@ builder.Services.AddDbConfiguration();
 // Extension method for configurate authentication and authorization
 builder.Services.AddAuthenticationAndAuthorizeConfiguration();
 
-// Extension method for configurate the global exception catching middleware
 builder.Services.AddCustomExceptionMiddleWareConfiguration();
 
-// Extension method for configurate validators
 builder.Services.AddValidatorConfiguration();
 
 // Extension method for configurate cloud infrastructure
