@@ -21,7 +21,8 @@ public class DispatchesController : ControllerBase
     public async Task<IActionResult> Create(CreateDispatchRequest request)
     {
         var response = await _dispatchService.CreateAsync(request);
-        return Created($"/api/dispatch/{response.DispatchId}", response);
+        
+        return CreatedAtAction("GetById", new { dispatchId = response.DispatchId }, response);
     }
 
     [HttpGet("{dispatchId}")]

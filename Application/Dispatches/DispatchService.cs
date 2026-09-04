@@ -125,9 +125,14 @@ public class DispatchService
         //   - order by DispatchId ascending (stable, unique order — required for keyset pagination)
         query = query
             .OrderBy(d => d.DispatchId)
-            .Take(request.Limit);
+            .Take(request.Limit + 1);
 
         var dispatches = await query.ToListAsync();
+
+        var hasMore = dispatches.Count > request.Limit;
+        if (hasMore)
+            dispatches.RemoveAt(dispatches.Count - 1);
+
         //   - map each Dispatch to a DispatchWriterDto
         var items = dispatches.Select(d => new DispatchWriterDto(d.DispatchId,
             d.Price,
@@ -136,8 +141,10 @@ public class DispatchService
             d.DispatchStatus,
             d.Vehicles.Select(v => new DispatchWriterVehicle(v.Vin))));
 
+        // If there are still dispatch in the database, return the id of the last dispatch to use 
+        // as cursor for the next call to this endpoint, if 
         return new PageResponseWithCursor<DispatchWriterDto>(items,
-            dispatches.Count == request.Limit ? dispatches.Last().DispatchId.ToString() : null);
+             hasMore ? dispatches.Last().DispatchId.ToString() : null);
     }
 
     public async Task AssignDriverAsync(Guid dispatchId, AssignDriverRequest request)
