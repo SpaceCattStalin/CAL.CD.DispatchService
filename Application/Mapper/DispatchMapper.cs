@@ -70,6 +70,8 @@ public static class DispatchMapper
 
     public static DispatchResponse ToDispatchResponse(Dispatch dispatch)
     {
+        var carrierCompany = dispatch.Companies.FirstOrDefault(c => c.CompanyId == dispatch.CarrierId);
+
         return new DispatchResponse(
             dispatch.DispatchId,
             dispatch.ShipperId,
@@ -82,6 +84,9 @@ public static class DispatchMapper
             dispatch.IsSigned,
             ToStopResponse(dispatch.PickupStop),
             ToStopResponse(dispatch.DropoffStop),
+            carrierCompany?.CompanyName,
+            carrierCompany?.CompanyPhone,
+            carrierCompany?.CompanyEmail,
             dispatch.Vehicles.Select(x => ToVehicleResponse(x)),
             dispatch.Drivers.Select(dd => ToDriverResponse(dd.Driver)),
             dispatch.CreatedAt);

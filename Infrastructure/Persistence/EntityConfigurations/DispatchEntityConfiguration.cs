@@ -44,5 +44,8 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
             .WithMany()
             .HasForeignKey(x => x.DropoffStopId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(x => x.Companies)
+            .WithMany(c => c.Dispatches);
     }
 }

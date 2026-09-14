@@ -17,7 +17,7 @@ public class Dispatch : BaseEntity
     public Stop? DropoffStop { get; private set; }
     public ICollection<DispatchDriver> Drivers { get; private set; } = new List<DispatchDriver>();
     public ICollection<Vehicle> Vehicles { get; private set; } = new List<Vehicle>();
-
+    public ICollection<Company> Companies { get; private set; } = new List<Company>();
     /// <summary>
     /// Method to create isntance of Dispatch class
     /// </summary>

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Application.Dispatches;
 using Infrastructure;
 using Presentation;
@@ -27,7 +28,10 @@ builder.Services.AddCloudInfrastructureConfiguration();
 
 builder.Services.AddScoped<DispatchService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(
+        options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles
+    );
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();

@@ -57,6 +57,19 @@ public class DispatchService
 
         var dispatch = DispatchMapper.ToDomain(request, ownerCompanyId);
 
+        var companies = await _db.Companies
+                            .Where(c => c.CompanyId.Equals(ownerCompanyId) || c.CompanyId.Equals(request.CarrierId))
+                            .ToListAsync();
+
+
+        if (companies.Count != 2)
+            throw new KeyNotFoundException("Something went wrong, there are more than 2 companies involed for this dispatch.");
+
+        foreach (var company in companies)
+        {
+            dispatch.Companies.Add(company);
+        }
+
         // Publish message to an existing topic running in a LocalStack container
         await _eventPublisher.Publish(new DispatchWriterEvent(
             EventType.Create,
@@ -77,12 +90,16 @@ public class DispatchService
     public async Task<DispatchResponse> GetByIdAsync(Guid dispatchId)
     {
         var dispatch = await _db.Dispatches
-            .Include(d => d.PickupStop)
-            .Include(d => d.DropoffStop)
-            .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
-            .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
-            .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
+                .Include(d => d.PickupStop)
+                .Include(d => d.DropoffStop)
+                .Include(d => d.Companies)
+                .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
+                .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
+                .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
+            // .Where(d => d.Companies.Any(c => c.CompanyId.Equals(d.CarrierId)))
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
+
+
         if (dispatch is null)
             throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
 
@@ -101,6 +118,7 @@ public class DispatchService
         var dispatches = await _db.Dispatches
             .Include(d => d.PickupStop)
             .Include(d => d.DropoffStop)
+            .Include(d => d.Companies)
             .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
             .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
             .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
