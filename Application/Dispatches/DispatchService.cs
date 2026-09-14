@@ -42,13 +42,20 @@ public class DispatchService
         _currentUser = currentUser;
     }
 
+    // ----- Create -----
     public async Task<CreateDispatchResponse> CreateAsync(CreateDispatchRequest request)
     {
         var result = await _createValidator.ValidateAsync(request);
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
 
-        var dispatch = DispatchMapper.ToDomain(request, _currentUser.UserId);
+        // Assign the company id of the current user who role is owner 
+        var ownerCompanyId = await _db.Users
+                        .Where(c => c.UserRole.Equals(UserRole.Owner) && c.UserId == _currentUser.UserId)
+                        .Select(u => u.CompanyId)
+                        .SingleOrDefaultAsync();
+
+        var dispatch = DispatchMapper.ToDomain(request, ownerCompanyId);
 
         // Publish message to an existing topic running in a LocalStack container
         await _eventPublisher.Publish(new DispatchWriterEvent(
@@ -66,6 +73,7 @@ public class DispatchService
         return DispatchMapper.ToResponse(dispatch);
     }
 
+    // ----- Get by id -----
     public async Task<DispatchResponse> GetByIdAsync(Guid dispatchId)
     {
         var dispatch = await _db.Dispatches
@@ -75,18 +83,18 @@ public class DispatchService
             .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
             .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
-
         if (dispatch is null)
             throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
 
         return DispatchMapper.ToDispatchResponse(dispatch);
     }
 
+    // ----- Get batch -----
     public async Task<GetDispatchBatchResponse> GetBatchAsync(GetDispatchBatchRequest request)
     {
-        var result = await _batchValidator.ValidateAsync(request);
-        if (!result.IsValid)
-            throw new ValidationException(result.Errors);
+        // var result = await _batchValidator.ValidateAsync(request);
+        // if (!result.IsValid)
+        //     throw new ValidationException(result.Errors);
 
         var requestedIds = request.DispatchIds.ToList();
 
@@ -105,8 +113,10 @@ public class DispatchService
         return new GetDispatchBatchResponse(
             dispatches.Select(DispatchMapper.ToDispatchResponse),
             notFound);
+
     }
 
+    // ----- Get paged -----
     public async Task<PageResponseWithCursor<DispatchWriterDto>> GetPagedAsync(GetDispatchesPagedRequest request)
     {
         var result = await _pagedValidator.ValidateAsync(request);
@@ -147,6 +157,7 @@ public class DispatchService
              hasMore ? dispatches.Last().DispatchId.ToString() : null);
     }
 
+    // ----- Assign driver -----
     public async Task AssignDriverAsync(Guid dispatchId, AssignDriverRequest request)
     {
         var result = await _assignDriverValidator.ValidateAsync(request);
@@ -181,6 +192,7 @@ public class DispatchService
         await _db.SaveChangesAsync();
     }
 
+    // ----- Delete -----
     public async Task DeleteAsync(Guid dispatchId)
     {
         var dispatch = await _db.Dispatches
@@ -213,6 +225,7 @@ public class DispatchService
         await _db.SaveChangesAsync();
     }
 
+    // ----- Update -----
     public async Task<DispatchResponse> UpdateAsync(Guid dispatchId, UpdateDispatchRequest request)
     {
         var result = await _updateValidator.ValidateAsync(request);
