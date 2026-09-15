@@ -27,16 +27,30 @@ public class SnsEventPublisher(IAmazonSimpleNotificationService sns, IOptions<Ap
 
     public async Task Publish(DispatchDeleteEvent deleteEvent)
     {
-        string message = JsonSerializer.Serialize(deleteEvent);
+        try
+        {
+            string message = JsonSerializer.Serialize(deleteEvent);
 
-        await sns.PublishAsync(_topicArn, message);
+            await sns.PublishAsync(_topicArn, message);
+        }
+        catch (NotFoundException exception)
+        {
+            Console.WriteLine("=============Error code: {0}, with error detail: {1}============", exception.ErrorCode, exception.Message);
+        }
     }
 
     public async Task Publish(DispatchUpdateEvent updateEvent)
     {
-        string messages = JsonSerializer.Serialize(updateEvent);
+        try
+        {
+            string messages = JsonSerializer.Serialize(updateEvent);
 
-        await sns.PublishAsync(_topicArn, messages);
+            await sns.PublishAsync(_topicArn, messages);
+        }
+        catch (NotFoundException exception)
+        {
+            Console.WriteLine("=============Error code: {0}, with error detail: {1}============", exception.ErrorCode, exception.Message);
+        }
     }
 
 }

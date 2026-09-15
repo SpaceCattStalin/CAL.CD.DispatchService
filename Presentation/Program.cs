@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Application;
 using Application.Dispatches;
 using Infrastructure;
 using Presentation;
@@ -27,6 +28,7 @@ builder.Services.AddValidatorConfiguration();
 builder.Services.AddCloudInfrastructureConfiguration();
 
 builder.Services.AddScoped<DispatchService>();
+builder.Services.AddScoped<CompanyService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(

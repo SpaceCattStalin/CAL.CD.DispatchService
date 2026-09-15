@@ -4,7 +4,9 @@ public class Dispatch : BaseEntity
 {
     public Guid DispatchId { get; init; }
     public Guid ShipperId { get; init; }
+    public Company? Shipper { get; private set; }
     public Guid CarrierId { get; private set; }
+    public Company? Carrier { get; private set; }
     public DispatchStatus DispatchStatus { get; private set; }
     public decimal Price { get; private set; }
     public DateTime PickupDate { get; private set; }
@@ -17,7 +19,6 @@ public class Dispatch : BaseEntity
     public Stop? DropoffStop { get; private set; }
     public ICollection<DispatchDriver> Drivers { get; private set; } = new List<DispatchDriver>();
     public ICollection<Vehicle> Vehicles { get; private set; } = new List<Vehicle>();
-    public ICollection<Company> Companies { get; private set; } = new List<Company>();
     /// <summary>
     /// Method to create isntance of Dispatch class
     /// </summary>
@@ -84,7 +85,7 @@ public class Dispatch : BaseEntity
                 vehicleInput.Vin, vehicleInput.Year, vehicleInput.Make, vehicleInput.Model, vehicleInput.Color);
             dispatch.Vehicles.Add(vehicle);
         }
-        
+
         dispatch.UpdateStatus(DispatchStatus.NotSigned);
 
         return dispatch;
@@ -124,6 +125,17 @@ public class Dispatch : BaseEntity
                 break;
         }
     }
+
+    public void SetCarrierCompany(Company carrier)
+    {
+        this.Carrier = carrier;
+    }
+
+    public void SetShipperCompany(Company shipper)
+    {
+        this.Shipper = shipper;
+    }
+
     /// <summary>
     /// Update this Dispatch's editable fields. CarrierId, ShipperId, and DispatchStatus are not
     /// affected here.

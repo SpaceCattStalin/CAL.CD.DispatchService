@@ -55,20 +55,16 @@ public class DispatchService
                         .Select(u => u.CompanyId)
                         .SingleOrDefaultAsync();
 
+
         var dispatch = DispatchMapper.ToDomain(request, ownerCompanyId);
 
-        var companies = await _db.Companies
-                            .Where(c => c.CompanyId.Equals(ownerCompanyId) || c.CompanyId.Equals(request.CarrierId))
-                            .ToListAsync();
+        var shipperCompany = await _db.Companies.FirstAsync(c => c.CompanyId.Equals(ownerCompanyId));
 
+        dispatch.SetShipperCompany(shipperCompany);
 
-        if (companies.Count != 2)
-            throw new KeyNotFoundException("Something went wrong, there are more than 2 companies involed for this dispatch.");
+        var carrierCompany = await _db.Companies.FirstAsync(c => c.CompanyId.Equals(request.CarrierId));
 
-        foreach (var company in companies)
-        {
-            dispatch.Companies.Add(company);
-        }
+        dispatch.SetCarrierCompany(carrierCompany);
 
         // Publish message to an existing topic running in a LocalStack container
         await _eventPublisher.Publish(new DispatchWriterEvent(
@@ -92,13 +88,14 @@ public class DispatchService
         var dispatch = await _db.Dispatches
                 .Include(d => d.PickupStop)
                 .Include(d => d.DropoffStop)
-                .Include(d => d.Companies)
+                .Include(d => d.Carrier)
+                .Include(d => d.Shipper)
                 .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
                 .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
                 .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
-            // .Where(d => d.Companies.Any(c => c.CompanyId.Equals(d.CarrierId)))
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
 
+        Console.WriteLine($"===========${dispatch.Carrier.CompanyName}=============");
 
         if (dispatch is null)
             throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
@@ -118,18 +115,25 @@ public class DispatchService
         var dispatches = await _db.Dispatches
             .Include(d => d.PickupStop)
             .Include(d => d.DropoffStop)
-            .Include(d => d.Companies)
+            .Include(d => d.Carrier)
+            .Include(d => d.Shipper)
             .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
             .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
             .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
             .Where(d => requestedIds.Contains(d.DispatchId))
             .ToListAsync();
 
+        foreach (var dispatch in dispatches)
+        {
+            Console.WriteLine($"===========${dispatch.Carrier.CompanyName}=============");
+            Console.WriteLine($"===========${dispatch.Carrier.CompanyEmail}=============");
+            Console.WriteLine($"===========${dispatch.Carrier.CompanyPhone}=============");
+        }
         var foundIds = dispatches.Select(d => d.DispatchId).ToHashSet();
         var notFound = requestedIds.Where(id => !foundIds.Contains(id));
 
         return new GetDispatchBatchResponse(
-            dispatches.Select(DispatchMapper.ToDispatchResponse),
+            dispatches.Select(x => DispatchMapper.ToDispatchResponse(x)),
             notFound);
 
     }
@@ -252,6 +256,8 @@ public class DispatchService
 
         var dispatch = await _db.Dispatches
             .Include(d => d.Vehicles)
+            .Include(d => d.Carrier)
+            .Include(d => d.Shipper)
             .Include(d => d.PickupStop)
             .Include(d => d.DropoffStop)
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);

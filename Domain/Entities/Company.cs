@@ -8,5 +8,4 @@ public class Company : BaseEntity
     public string CompanyEmail { get; private set; }
     public CompanyType CompanyType { get; init; }
     public ICollection<User> Users { get; private set; } = new List<User>();
-    public ICollection<Dispatch> Dispatches { get; private set; } = new List<Dispatch>();
 }
