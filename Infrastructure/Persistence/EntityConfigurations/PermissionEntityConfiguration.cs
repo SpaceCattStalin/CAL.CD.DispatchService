@@ -30,7 +30,8 @@ public class PermissionEntityConfiguration : IEntityTypeConfiguration<Permission
             new { PermissionId = RbacSeedIds.UsersUpdatePermissionId, Name = "users:update", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp },
             new { PermissionId = RbacSeedIds.UsersDeletePermissionId, Name = "users:delete", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp },
             new { PermissionId = RbacSeedIds.CompaniesReadPermissionId, Name = "companies:read", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp },
-            new { PermissionId = RbacSeedIds.CompaniesUpdatePermissionId, Name = "companies:update", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp }
+            new { PermissionId = RbacSeedIds.CompaniesUpdatePermissionId, Name = "companies:update", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp },
+            new { PermissionId = RbacSeedIds.DispatchesReadAllPermissionId, Name = "dispatches:read-all", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp }
         );
     }
 }

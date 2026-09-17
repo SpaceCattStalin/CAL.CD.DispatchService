@@ -42,7 +42,7 @@ public class DispatchesController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = PermissionNames.DispatchesRead)]
+    [Authorize(Policy = PermissionNames.DispatchesReadAll)]
     public async Task<IActionResult> GetPaged([FromQuery] string? cursor, [FromQuery] int limit = 500)
     {
         var response = await _dispatchService.GetPagedAsync(new GetDispatchesPagedRequest(cursor, limit));

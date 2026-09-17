@@ -70,6 +70,8 @@ public class DispatchService
         await _eventPublisher.Publish(new DispatchWriterEvent(
             EventType.Create,
             dispatch.DispatchId,
+            dispatch.ShipperId,
+            dispatch.CarrierId,
             dispatch.Price,
             dispatch.PickupDate,
             dispatch.DropoffDate,

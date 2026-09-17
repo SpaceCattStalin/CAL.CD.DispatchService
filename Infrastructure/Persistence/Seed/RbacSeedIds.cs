@@ -7,7 +7,7 @@ internal static class RbacSeedIds
     public static readonly Guid OwnerRoleId = new("10000000-0000-0000-0000-000000000001");
     public static readonly Guid AdminRoleId = new("10000000-0000-0000-0000-000000000002");
     public static readonly Guid DriverRoleId = new("10000000-0000-0000-0000-000000000003");
-
+    public static readonly Guid SyncRoleId = new("90000000-0000-0000-0000-000000000001");
     public static readonly Guid DispatchesCreatePermissionId = new("20000000-0000-0000-0000-000000000001");
     public static readonly Guid DispatchesReadPermissionId = new("20000000-0000-0000-0000-000000000002");
     public static readonly Guid DispatchesUpdatePermissionId = new("20000000-0000-0000-0000-000000000003");
@@ -18,4 +18,5 @@ internal static class RbacSeedIds
     public static readonly Guid UsersDeletePermissionId = new("20000000-0000-0000-0000-000000000008");
     public static readonly Guid CompaniesReadPermissionId = new("20000000-0000-0000-0000-000000000009");
     public static readonly Guid CompaniesUpdatePermissionId = new("20000000-0000-0000-0000-00000000000a");
+    public static readonly Guid DispatchesReadAllPermissionId = new("20000000-0000-0000-0000-00000000000b");
 }

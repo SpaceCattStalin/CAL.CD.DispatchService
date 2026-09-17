@@ -52,5 +52,22 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
             CreatedAt = TestUserSeedIds.SeedTimestamp,
             UpdatedAt = TestUserSeedIds.SeedTimestamp
         });
+
+
+        builder.HasData(new
+        {
+            UserId = RbacSeedIds.SyncRoleId,
+            FirstName = "SyncJobbbb",
+            LastName = "SyncJobbb",
+            Phone = "12345678910",
+            Email = "syncjob@placeholder.com",
+            UserName = "SyncJobbbb",
+            PasswordHash = TestUserSeedIds.PasswordHash,
+            UserRole = UserRole.SyncJob,
+            IsActive = true,
+            CompanyId = TestUserSeedIds.CompanyId,
+            CreatedAt = TestUserSeedIds.SeedTimestamp,
+            UpdatedAt = TestUserSeedIds.SeedTimestamp
+        });
     }
 }

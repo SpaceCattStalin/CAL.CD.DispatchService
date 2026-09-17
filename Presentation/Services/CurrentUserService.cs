@@ -8,7 +8,8 @@ namespace Presentation.Services;
 public class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-
+    public bool HasPermission(string permissionName) =>
+        _httpContextAccessor.HttpContext?.User.HasClaim(CustomClaimTypes.Permission, permissionName) ?? false;
     public CurrentUserService(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;

@@ -4,5 +4,6 @@ public enum UserRole
 {
     Owner,
     Admin,
-    Driver
+    Driver,
+    SyncJob
 }

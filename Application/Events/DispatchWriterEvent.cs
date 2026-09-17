@@ -5,6 +5,8 @@ namespace Application.Events;
 public class DispatchWriterEvent(
     EventType Type,
     Guid DispatchId,
+    Guid ShipperId,
+    Guid CarrierId,
     decimal PriceTotal,
     DateTime PickupDate,
     DateTime DropoffDate,
@@ -13,6 +15,8 @@ public class DispatchWriterEvent(
 {
     public EventType Type { get; } = Type;
     public Guid DispatchId { get; } = DispatchId;
+    public Guid ShipperId { get; } = ShipperId;
+    public Guid CarrierId { get; } = CarrierId;
     public decimal PriceTotal { get; } = PriceTotal;
     public DateTime PickupDate { get; } = PickupDate;
     public DateTime DropoffDate { get; } = DropoffDate;
