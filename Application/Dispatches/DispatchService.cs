@@ -95,7 +95,6 @@ public class DispatchService
                 .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
 
-        Console.WriteLine($"===========${dispatch.Carrier.CompanyName}=============");
 
         if (dispatch is null)
             throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
@@ -123,19 +122,12 @@ public class DispatchService
             .Where(d => requestedIds.Contains(d.DispatchId))
             .ToListAsync();
 
-        foreach (var dispatch in dispatches)
-        {
-            Console.WriteLine($"===========${dispatch.Carrier.CompanyName}=============");
-            Console.WriteLine($"===========${dispatch.Carrier.CompanyEmail}=============");
-            Console.WriteLine($"===========${dispatch.Carrier.CompanyPhone}=============");
-        }
         var foundIds = dispatches.Select(d => d.DispatchId).ToHashSet();
         var notFound = requestedIds.Where(id => !foundIds.Contains(id));
 
         return new GetDispatchBatchResponse(
-            dispatches.Select(x => DispatchMapper.ToDispatchResponse(x)),
+            dispatches.Count == 0 ? [] : dispatches.Select(x => DispatchMapper.ToDispatchResponse(x)),
             notFound);
-
     }
 
     // ----- Get paged -----
@@ -166,7 +158,10 @@ public class DispatchService
             dispatches.RemoveAt(dispatches.Count - 1);
 
         //   - map each Dispatch to a DispatchWriterDto
-        var items = dispatches.Select(d => new DispatchWriterDto(d.DispatchId,
+        var items = dispatches.Select(d => new DispatchWriterDto(
+            d.DispatchId,
+            d.CarrierId,
+            d.ShipperId,
             d.Price,
             d.PickupDate,
             d.DropoffDate,

@@ -37,7 +37,7 @@ public class AuthService
             .SingleOrDefaultAsync(r => r.Name == roleName);
 
         var permissions = role.RolePermissions.Select(rp => rp.Permission.Name);
-        var token = _tokenGenerator.GenerateToken(user.UserId, user.UserName, roleName, permissions);
+        var token = _tokenGenerator.GenerateToken(user.UserId, user.UserName, roleName, user.CompanyId, permissions);
 
         return new LoginResponse(token.AccessToken, token.ExpiresAt);
     }

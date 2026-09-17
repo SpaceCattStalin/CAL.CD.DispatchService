@@ -9,6 +9,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+const string DevelopmentCorsPolicy = "DevelopmentCorsPolicy";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(DevelopmentCorsPolicy, policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddOptions<AppSettings>()
     .Bind(builder.Configuration)
     .ValidateDataAnnotations()
@@ -40,8 +51,7 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseCors(DevelopmentCorsPolicy);
 }
 
 app.UseHttpsRedirection();
