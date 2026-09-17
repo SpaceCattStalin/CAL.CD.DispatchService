@@ -3,6 +3,7 @@ using System;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914030617_Add company dispatch realtionship")]
+    partial class Addcompanydispatchrealtionship
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,6 +24,21 @@ namespace Infrastructure.Persistence.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("CompanyDispatch", b =>
+                {
+                    b.Property<Guid>("CompaniesCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DispatchesDispatchId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("CompaniesCompanyId", "DispatchesDispatchId");
+
+                    b.HasIndex("DispatchesDispatchId");
+
+                    b.ToTable("CompanyDispatch");
+                });
 
             modelBuilder.Entity("Domain.Company", b =>
                 {
@@ -155,13 +173,9 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasKey("DispatchId");
 
-                    b.HasIndex("CarrierId");
-
                     b.HasIndex("DropoffStopId");
 
                     b.HasIndex("PickupStopId");
-
-                    b.HasIndex("ShipperId");
 
                     b.ToTable("dispatches", null, t =>
                         {
@@ -777,14 +791,23 @@ namespace Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Domain.Dispatch", b =>
+            modelBuilder.Entity("CompanyDispatch", b =>
                 {
-                    b.HasOne("Domain.Company", "Carrier")
+                    b.HasOne("Domain.Company", null)
                         .WithMany()
-                        .HasForeignKey("CarrierId")
+                        .HasForeignKey("CompaniesCompanyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Domain.Dispatch", null)
+                        .WithMany()
+                        .HasForeignKey("DispatchesDispatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Dispatch", b =>
+                {
                     b.HasOne("Domain.Stop", "DropoffStop")
                         .WithMany()
                         .HasForeignKey("DropoffStopId")
@@ -795,19 +818,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasForeignKey("PickupStopId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Domain.Company", "Shipper")
-                        .WithMany()
-                        .HasForeignKey("ShipperId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Carrier");
-
                     b.Navigation("DropoffStop");
 
                     b.Navigation("PickupStop");
-
-                    b.Navigation("Shipper");
                 });
 
             modelBuilder.Entity("Domain.DispatchDriver", b =>

@@ -42,13 +42,29 @@ public class DispatchService
         _currentUser = currentUser;
     }
 
+    // ----- Create -----
     public async Task<CreateDispatchResponse> CreateAsync(CreateDispatchRequest request)
     {
         var result = await _createValidator.ValidateAsync(request);
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
 
-        var dispatch = DispatchMapper.ToDomain(request, _currentUser.UserId);
+        // Assign the company id of the current user who role is owner 
+        var ownerCompanyId = await _db.Users
+                        .Where(c => c.UserRole.Equals(UserRole.Owner) && c.UserId == _currentUser.UserId)
+                        .Select(u => u.CompanyId)
+                        .SingleOrDefaultAsync();
+
+
+        var dispatch = DispatchMapper.ToDomain(request, ownerCompanyId);
+
+        var shipperCompany = await _db.Companies.FirstAsync(c => c.CompanyId.Equals(ownerCompanyId));
+
+        dispatch.SetShipperCompany(shipperCompany);
+
+        var carrierCompany = await _db.Companies.FirstAsync(c => c.CompanyId.Equals(request.CarrierId));
+
+        dispatch.SetCarrierCompany(carrierCompany);
 
         // Publish message to an existing topic running in a LocalStack container
         await _eventPublisher.Publish(new DispatchWriterEvent(
@@ -66,15 +82,20 @@ public class DispatchService
         return DispatchMapper.ToResponse(dispatch);
     }
 
+    // ----- Get by id -----
     public async Task<DispatchResponse> GetByIdAsync(Guid dispatchId)
     {
         var dispatch = await _db.Dispatches
-            .Include(d => d.PickupStop)
-            .Include(d => d.DropoffStop)
-            .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
-            .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
-            .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
+                .Include(d => d.PickupStop)
+                .Include(d => d.DropoffStop)
+                .Include(d => d.Carrier)
+                .Include(d => d.Shipper)
+                .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
+                .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
+                .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
+
+        Console.WriteLine($"===========${dispatch.Carrier.CompanyName}=============");
 
         if (dispatch is null)
             throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
@@ -82,31 +103,42 @@ public class DispatchService
         return DispatchMapper.ToDispatchResponse(dispatch);
     }
 
+    // ----- Get batch -----
     public async Task<GetDispatchBatchResponse> GetBatchAsync(GetDispatchBatchRequest request)
     {
-        var result = await _batchValidator.ValidateAsync(request);
-        if (!result.IsValid)
-            throw new ValidationException(result.Errors);
+        // var result = await _batchValidator.ValidateAsync(request);
+        // if (!result.IsValid)
+        //     throw new ValidationException(result.Errors);
 
         var requestedIds = request.DispatchIds.ToList();
 
         var dispatches = await _db.Dispatches
             .Include(d => d.PickupStop)
             .Include(d => d.DropoffStop)
+            .Include(d => d.Carrier)
+            .Include(d => d.Shipper)
             .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
             .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
             .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
             .Where(d => requestedIds.Contains(d.DispatchId))
             .ToListAsync();
 
+        foreach (var dispatch in dispatches)
+        {
+            Console.WriteLine($"===========${dispatch.Carrier.CompanyName}=============");
+            Console.WriteLine($"===========${dispatch.Carrier.CompanyEmail}=============");
+            Console.WriteLine($"===========${dispatch.Carrier.CompanyPhone}=============");
+        }
         var foundIds = dispatches.Select(d => d.DispatchId).ToHashSet();
         var notFound = requestedIds.Where(id => !foundIds.Contains(id));
 
         return new GetDispatchBatchResponse(
-            dispatches.Select(DispatchMapper.ToDispatchResponse),
+            dispatches.Select(x => DispatchMapper.ToDispatchResponse(x)),
             notFound);
+
     }
 
+    // ----- Get paged -----
     public async Task<PageResponseWithCursor<DispatchWriterDto>> GetPagedAsync(GetDispatchesPagedRequest request)
     {
         var result = await _pagedValidator.ValidateAsync(request);
@@ -147,6 +179,7 @@ public class DispatchService
              hasMore ? dispatches.Last().DispatchId.ToString() : null);
     }
 
+    // ----- Assign driver -----
     public async Task AssignDriverAsync(Guid dispatchId, AssignDriverRequest request)
     {
         var result = await _assignDriverValidator.ValidateAsync(request);
@@ -181,6 +214,7 @@ public class DispatchService
         await _db.SaveChangesAsync();
     }
 
+    // ----- Delete -----
     public async Task DeleteAsync(Guid dispatchId)
     {
         var dispatch = await _db.Dispatches
@@ -213,6 +247,7 @@ public class DispatchService
         await _db.SaveChangesAsync();
     }
 
+    // ----- Update -----
     public async Task<DispatchResponse> UpdateAsync(Guid dispatchId, UpdateDispatchRequest request)
     {
         var result = await _updateValidator.ValidateAsync(request);
@@ -221,6 +256,8 @@ public class DispatchService
 
         var dispatch = await _db.Dispatches
             .Include(d => d.Vehicles)
+            .Include(d => d.Carrier)
+            .Include(d => d.Shipper)
             .Include(d => d.PickupStop)
             .Include(d => d.DropoffStop)
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);

@@ -82,6 +82,9 @@ public static class DispatchMapper
             dispatch.IsSigned,
             ToStopResponse(dispatch.PickupStop),
             ToStopResponse(dispatch.DropoffStop),
+            dispatch.Carrier.CompanyName,
+            dispatch.Carrier.CompanyPhone,
+            dispatch.Carrier.CompanyEmail,
             dispatch.Vehicles.Select(x => ToVehicleResponse(x)),
             dispatch.Drivers.Select(dd => ToDriverResponse(dd.Driver)),
             dispatch.CreatedAt);

@@ -17,8 +17,7 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
 
         builder.Property(x => x.DispatchId).HasColumnName("dispatch_id");
         builder.Property(x => x.DispatchStatus).HasColumnName("dispatch_status").HasConversion<string>();
-        builder.Property(x => x.ShipperId).HasColumnName("shipper_id");
-        builder.Property(x => x.CarrierId).HasColumnName("carrier_id");
+
         builder.Property(x => x.Price).HasColumnName("price");
         builder.Property(x => x.PickupDate).HasColumnName("pickup_date");
         builder.Property(x => x.DropoffDate).HasColumnName("dropoff_date");
@@ -30,6 +29,11 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
         builder.Property(x => x.RecordVersion).IsRowVersion();
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+
+        builder.Property(x => x.ShipperId).HasColumnName("shipper_id");
+        builder.Property(x => x.CarrierId).HasColumnName("carrier_id");
+
+
 
         builder.HasMany(x => x.Vehicles)
            .WithOne(v => v.Dispatch)
@@ -44,5 +48,13 @@ public class DispatchEntityConfiguration : IEntityTypeConfiguration<Dispatch>
             .WithMany()
             .HasForeignKey(x => x.DropoffStopId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.Shipper)
+            .WithMany()
+            .HasForeignKey(x => x.ShipperId);
+
+        builder.HasOne(x => x.Carrier)
+            .WithMany()
+            .HasForeignKey(x => x.CarrierId);
     }
 }

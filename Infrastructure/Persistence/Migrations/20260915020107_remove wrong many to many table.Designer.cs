@@ -3,6 +3,7 @@ using System;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915020107_remove wrong many to many table")]
+    partial class removewrongmanytomanytable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -56,6 +59,9 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid?>("DispatchId")
+                        .HasColumnType("uuid");
+
                     b.Property<uint>("RecordVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -67,6 +73,8 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("CompanyId");
+
+                    b.HasIndex("DispatchId");
 
                     b.ToTable("companies", null, t =>
                         {
@@ -777,6 +785,13 @@ namespace Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Domain.Company", b =>
+                {
+                    b.HasOne("Domain.Dispatch", null)
+                        .WithMany("Companies")
+                        .HasForeignKey("DispatchId");
+                });
+
             modelBuilder.Entity("Domain.Dispatch", b =>
                 {
                     b.HasOne("Domain.Company", "Carrier")
@@ -893,6 +908,8 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Domain.Dispatch", b =>
                 {
+                    b.Navigation("Companies");
+
                     b.Navigation("Drivers");
 
                     b.Navigation("Vehicles");

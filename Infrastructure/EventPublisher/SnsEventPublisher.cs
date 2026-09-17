@@ -3,6 +3,7 @@ using Application.Events;
 using Amazon.SimpleNotificationService;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Amazon.SimpleNotificationService.Model;
 
 namespace Infrastructure;
 
@@ -12,23 +13,44 @@ public class SnsEventPublisher(IAmazonSimpleNotificationService sns, IOptions<Ap
 
     public async Task Publish(DispatchWriterEvent writerEvent)
     {
-        string message = JsonSerializer.Serialize(writerEvent);
+        try
+        {
+            string message = JsonSerializer.Serialize(writerEvent);
 
-        await sns.PublishAsync(_topicArn, message);
+            await sns.PublishAsync(_topicArn, message);
+        }
+        catch (NotFoundException exception)
+        {
+            Console.WriteLine("=============Error code: {0}, with error detail: {1}============", exception.ErrorCode, exception.Message);
+        }
     }
 
     public async Task Publish(DispatchDeleteEvent deleteEvent)
     {
-        string message = JsonSerializer.Serialize(deleteEvent);
+        try
+        {
+            string message = JsonSerializer.Serialize(deleteEvent);
 
-        await sns.PublishAsync(_topicArn, message);
+            await sns.PublishAsync(_topicArn, message);
+        }
+        catch (NotFoundException exception)
+        {
+            Console.WriteLine("=============Error code: {0}, with error detail: {1}============", exception.ErrorCode, exception.Message);
+        }
     }
 
     public async Task Publish(DispatchUpdateEvent updateEvent)
     {
-        string messages = JsonSerializer.Serialize(updateEvent);
+        try
+        {
+            string messages = JsonSerializer.Serialize(updateEvent);
 
-        await sns.PublishAsync(_topicArn, messages);
+            await sns.PublishAsync(_topicArn, messages);
+        }
+        catch (NotFoundException exception)
+        {
+            Console.WriteLine("=============Error code: {0}, with error detail: {1}============", exception.ErrorCode, exception.Message);
+        }
     }
 
 }
