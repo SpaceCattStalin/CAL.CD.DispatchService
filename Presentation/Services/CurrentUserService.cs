@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Application;
+using Application.Auth;
 using Application.Interfaces;
 
 namespace Presentation.Services;
@@ -22,6 +23,18 @@ public class CurrentUserService : ICurrentUserService
                 throw new UnauthorizedAccessException("No authenticated user");
 
             return userId;
+        }
+    }
+
+    public Guid CompanyId
+    {
+        get
+        {
+            var value = _httpContextAccessor.HttpContext?.User.FindFirstValue(CustomClaimTypes.CompanyId);
+            if (!Guid.TryParse(value, out var companyId))
+                throw new UnauthorizedAccessException("No authenticated user");
+
+            return companyId;
         }
     }
 }

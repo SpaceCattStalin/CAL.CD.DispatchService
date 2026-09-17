@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces;
 using Infrastructure;
+using Infrastructure.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -13,6 +14,7 @@ public static class DbConfigurationExtensions
         {
             var connectionString = sp.GetRequiredService<IOptions<AppSettings>>().Value.ConnectionStrings.DbConnection;
             options.UseNpgsql(connectionString);
+            options.AddInterceptors(new CompanyContextConnectionInterceptor(sp.GetRequiredService<ICurrentUserService>()));
         });
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());

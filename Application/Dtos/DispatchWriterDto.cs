@@ -7,6 +7,8 @@ namespace Application.Dispatches;
 // a paginated GET response has no Create/Update/Delete concept, only current state.
 public class DispatchWriterDto(
     Guid DispatchId,
+    Guid CarrierId,
+    Guid ShipperId,
     decimal PriceTotal,
     DateTime PickupDate,
     DateTime DropoffDate,
@@ -14,6 +16,8 @@ public class DispatchWriterDto(
     IEnumerable<DispatchWriterVehicle> Vehicles)
 {
     public Guid DispatchId { get; init; } = DispatchId;
+    public Guid CarrierId { get; set; } = CarrierId;
+    public Guid ShipperId { get; set; } = ShipperId;
     public decimal PriceTotal { get; init; } = PriceTotal;
     public DateTime PickupDate { get; init; } = PickupDate;
     public DateTime DropoffDate { get; init; } = DropoffDate;

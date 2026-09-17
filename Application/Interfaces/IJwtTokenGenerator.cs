@@ -4,5 +4,5 @@ namespace Application.Interfaces;
 
 public interface IJwtTokenGenerator
 {
-    JwtToken GenerateToken(Guid userId, string userName, string roleName, IEnumerable<string> permissions);
+    JwtToken GenerateToken(Guid userId, string userName, string roleName, Guid companyId, IEnumerable<string> permissions);
 }
