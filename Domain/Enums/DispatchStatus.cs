@@ -6,8 +6,9 @@ namespace Domain;
 public enum DispatchStatus
 {
     NotSigned,
-    PendingPickup,
-    PendingDelivery,
+    // Hien tren UI
+    PendingPickup, // Dispatched
+    PendingDelivery, // Picked Up
     Delivered,
     Canceled
 }

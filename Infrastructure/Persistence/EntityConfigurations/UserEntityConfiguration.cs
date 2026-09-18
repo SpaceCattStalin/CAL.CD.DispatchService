@@ -53,6 +53,37 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
             UpdatedAt = TestUserSeedIds.SeedTimestamp
         });
 
+        builder.HasData(new
+        {
+            UserId = TestUserSeedIds.CarrierOwnerId,
+            FirstName = "Carrier",
+            LastName = "Ownerrrrrr",
+            Phone = "1234567890",
+            Email = "owner@testcarriers.com",
+            UserName = "testcarrier",
+            PasswordHash = TestUserSeedIds.PasswordHash,
+            UserRole = UserRole.Owner,
+            IsActive = true,
+            CompanyId = new Guid("dc63068f-dbfc-422c-8464-f47698fd8905"),
+            CreatedAt = TestUserSeedIds.SeedTimestamp,
+            UpdatedAt = TestUserSeedIds.SeedTimestamp
+        });
+
+        builder.HasData(new
+        {
+            UserId = TestUserSeedIds.CarrierDriverId,
+            FirstName = "Driver",
+            LastName = "Driverrrrrr",
+            Phone = "1234567890",
+            Email = "owner@testdriverr.com",
+            UserName = "testdriver",
+            PasswordHash = TestUserSeedIds.PasswordHash,
+            UserRole = UserRole.Driver,
+            IsActive = true,
+            CompanyId = new Guid("dc63068f-dbfc-422c-8464-f47698fd8905"),
+            CreatedAt = TestUserSeedIds.SeedTimestamp,
+            UpdatedAt = TestUserSeedIds.SeedTimestamp
+        });
 
         builder.HasData(new
         {
@@ -69,5 +100,242 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
             CreatedAt = TestUserSeedIds.SeedTimestamp,
             UpdatedAt = TestUserSeedIds.SeedTimestamp
         });
+
+        builder.HasData(
+            // Apex Carriers LLC
+            new
+            {
+                UserId = DemoDataSeedIds.ApexCarriersOwnerId,
+                FirstName = "Marcus",
+                LastName = "Alden",
+                Phone = "5550002001",
+                Email = "m.alden@apexcarriers.com",
+                UserName = "malden01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Owner,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.ApexCarriersId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.ApexCarriersDriver1Id,
+                FirstName = "Derek",
+                LastName = "Simmons",
+                Phone = "5550002002",
+                Email = "d.simmons@apexcarriers.com",
+                UserName = "dsimmons01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.ApexCarriersId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.ApexCarriersDriver2Id,
+                FirstName = "Nathan",
+                LastName = "Coleman",
+                Phone = "5550002003",
+                Email = "n.coleman@apexcarriers.com",
+                UserName = "ncoleman01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.ApexCarriersId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+
+            // Blue Horizon Transport
+            new
+            {
+                UserId = DemoDataSeedIds.BlueHorizonOwnerId,
+                FirstName = "Renee",
+                LastName = "Whitfield",
+                Phone = "5550002004",
+                Email = "r.whitfield@bluehorizon.com",
+                UserName = "rwhitfield01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Owner,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.BlueHorizonId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.BlueHorizonDriver1Id,
+                FirstName = "Oscar",
+                LastName = "Bennett",
+                Phone = "5550002005",
+                Email = "o.bennett@bluehorizon.com",
+                UserName = "obennett01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.BlueHorizonId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.BlueHorizonDriver2Id,
+                FirstName = "Miguel",
+                LastName = "Torres",
+                Phone = "5550002006",
+                Email = "m.torres@bluehorizon.com",
+                UserName = "mtorres01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.BlueHorizonId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+
+            // Midwest Freight Solutions
+            new
+            {
+                UserId = DemoDataSeedIds.MidwestFreightOwnerId,
+                FirstName = "Diana",
+                LastName = "Foster",
+                Phone = "5550002007",
+                Email = "d.foster@midwestfreight.com",
+                UserName = "dfoster01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Owner,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.MidwestFreightId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.MidwestFreightDriver1Id,
+                FirstName = "Trevor",
+                LastName = "Banks",
+                Phone = "5550002008",
+                Email = "t.banks@midwestfreight.com",
+                UserName = "tbanks01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.MidwestFreightId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.MidwestFreightDriver2Id,
+                FirstName = "Isaac",
+                LastName = "Meyer",
+                Phone = "5550002009",
+                Email = "i.meyer@midwestfreight.com",
+                UserName = "imeyer01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.MidwestFreightId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+
+            // Golden State Manufacturing
+            new
+            {
+                UserId = DemoDataSeedIds.GoldenStateOwnerId,
+                FirstName = "Sophia",
+                LastName = "Grant",
+                Phone = "5550002010",
+                Email = "s.grant@goldenstate.com",
+                UserName = "sgrant01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Owner,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.GoldenStateId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.GoldenStateDriver1Id,
+                FirstName = "Connor",
+                LastName = "Reyes",
+                Phone = "5550002011",
+                Email = "c.reyes@goldenstate.com",
+                UserName = "creyes01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.GoldenStateId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.GoldenStateDriver2Id,
+                FirstName = "Julia",
+                LastName = "Stanton",
+                Phone = "5550002012",
+                Email = "j.stanton@goldenstate.com",
+                UserName = "jstanton01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.GoldenStateId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+
+            // Summit Retail Group
+            new
+            {
+                UserId = DemoDataSeedIds.SummitRetailOwnerId,
+                FirstName = "Victor",
+                LastName = "Holloway",
+                Phone = "5550002013",
+                Email = "v.holloway@summitretail.com",
+                UserName = "vholloway01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Owner,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.SummitRetailId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.SummitRetailDriver1Id,
+                FirstName = "Grace",
+                LastName = "Pemberton",
+                Phone = "5550002014",
+                Email = "g.pemberton@summitretail.com",
+                UserName = "gpemberton01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.SummitRetailId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.SummitRetailDriver2Id,
+                FirstName = "Ethan",
+                LastName = "Ramirez",
+                Phone = "5550002015",
+                Email = "e.ramirez@summitretail.com",
+                UserName = "eramirez01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.SummitRetailId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            }
+        );
     }
 }

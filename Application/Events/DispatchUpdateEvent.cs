@@ -9,7 +9,8 @@ public class DispatchUpdateEvent(
     DateTime PickupDate,
     DateTime DropoffDate,
     DispatchStatus DispatchStatus,
-    IEnumerable<DispatchUpdateVehicle> Vehicles)
+    IEnumerable<DispatchUpdateVehicle> Vehicles,
+    DateTime CreatedAt)
 {
     public EventType Type { get; } = Type;
     public Guid DispatchId { get; } = DispatchId;
@@ -18,6 +19,7 @@ public class DispatchUpdateEvent(
     public DateTime DropoffDate { get; } = DropoffDate;
     public DispatchStatus DispatchStatus { get; } = DispatchStatus;
     public IEnumerable<DispatchUpdateVehicle> Vehicles { get; } = Vehicles;
+    public DateTime CreatedAt { get; } = CreatedAt;
 }
 
 public class DispatchUpdateVehicle(string? Vin)

@@ -24,11 +24,11 @@ public class UpdateDispatchRequestValidator : AbstractValidator<UpdateDispatchRe
         RuleForEach(x => x.Vehicles).ChildRules(vehicle =>
         {
             vehicle.RuleFor(v => v.Make).NotEmpty()
-                .WithMessage("Make is required when adding a new vehicle.");
+                .WithMessage("Make is required when updating a new vehicle.");
             vehicle.RuleFor(v => v.Model).NotEmpty()
-                .WithMessage("Model is required when adding a new vehicle.");
+                .WithMessage("Model is required when updating a new vehicle.");
             vehicle.RuleFor(v => v.Year).NotNull()
-                .WithMessage("Year is required when adding a new vehicle.");
+                .WithMessage("Year is required when updating a new vehicle.");
 
             vehicle.RuleFor(v => v.Year)
                 .GreaterThanOrEqualTo(1900)
