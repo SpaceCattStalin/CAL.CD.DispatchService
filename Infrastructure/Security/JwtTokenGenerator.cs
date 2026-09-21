@@ -13,15 +13,18 @@ public class JwtTokenGenerator(IOptions<AppSettings> appSettings) : IJwtTokenGen
 {
     private readonly JwtSettings _settings = appSettings.Value.Jwt;
 
-    public JwtToken GenerateToken(Guid userId, string userName, string roleName, Guid companyId, IEnumerable<string> permissions)
+    public JwtToken GenerateToken(Guid userId, string userName, string lastName, string firstName, string roleName, Guid companyId, string companyName, string companyType, IEnumerable<string> permissions)
     {
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new(ClaimTypes.NameIdentifier, userId.ToString()),
-            new(ClaimTypes.Name, userName),
-            new(ClaimTypes.Role, roleName),
+            new(CustomClaimTypes.UserName, userName),
+            new(CustomClaimTypes.Role, roleName),
+            new(CustomClaimTypes.LastName, lastName),
+            new(CustomClaimTypes.FirstName, firstName),
             new(CustomClaimTypes.CompanyId, companyId.ToString()),
+            new(CustomClaimTypes.CompanyName, companyName),
+            new(CustomClaimTypes.CompanyType, companyType),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
