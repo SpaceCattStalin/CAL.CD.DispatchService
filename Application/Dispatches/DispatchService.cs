@@ -108,22 +108,28 @@ public class DispatchService
     // ----- Get batch -----
     public async Task<GetDispatchBatchResponse> GetBatchAsync(GetDispatchBatchRequest request)
     {
-        // var result = await _batchValidator.ValidateAsync(request);
-        // if (!result.IsValid)
-        //     throw new ValidationException(result.Errors);
-
         var requestedIds = request.DispatchIds.ToList();
 
-        var dispatches = await _db.Dispatches
+        var query = _db.Dispatches
             .Include(d => d.PickupStop)
             .Include(d => d.DropoffStop)
-            .Include(d => d.Carrier)
-            .Include(d => d.Shipper)
             .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
             .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
             .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
-            .Where(d => requestedIds.Contains(d.DispatchId))
-            .ToListAsync();
+            .Where(d => requestedIds.Contains(d.DispatchId));
+
+        // Check what type of company the current user is 
+        // and return the opposite company type data
+        if (_currentUser.CompanyType == CompanyType.Carrier)
+        {
+            query = query.Include(d => d.Shipper);
+        }
+        else if (_currentUser.CompanyType == CompanyType.Shipper)
+        {
+            query = query.Include(d => d.Carrier);
+        }
+
+        var dispatches = await query.ToListAsync();
 
         var foundIds = dispatches.Select(d => d.DispatchId).ToHashSet();
         var notFound = requestedIds.Where(id => !foundIds.Contains(id));

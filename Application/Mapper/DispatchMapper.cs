@@ -25,8 +25,8 @@ public static class DispatchMapper
     {
         return new CreateDispatchResponse(
             dispatch.DispatchId,
-            dispatch.ShipperId,
-            dispatch.CarrierId,
+            ToCompanyResponse(dispatch.Shipper),
+            ToCompanyResponse(dispatch.Carrier),
             dispatch.DispatchStatus.ToString(),
             dispatch.Price,
             dispatch.PickupDate,
@@ -37,6 +37,18 @@ public static class DispatchMapper
             ToStopResponse(dispatch.DropoffStop),
             dispatch.Vehicles.Select(x => ToVehicleResponse(x)),
             dispatch.CreatedAt);
+    }
+
+    private static CompanyResponse? ToCompanyResponse(Company? company)
+    {
+        if (company is null)
+            return null;
+
+        return new CompanyResponse(
+            company.CompanyId,
+            company.CompanyName,
+            company.CompanyPhone,
+            company.CompanyEmail);
     }
 
     private static StopResponse? ToStopResponse(Stop? stop)
@@ -72,8 +84,8 @@ public static class DispatchMapper
     {
         return new DispatchResponse(
             dispatch.DispatchId,
-            dispatch.ShipperId,
-            dispatch.CarrierId,
+            ToCompanyResponse(dispatch.Shipper),
+            ToCompanyResponse(dispatch.Carrier),
             dispatch.DispatchStatus.ToString(),
             dispatch.Price,
             dispatch.PickupDate,
@@ -82,9 +94,6 @@ public static class DispatchMapper
             dispatch.IsSigned,
             ToStopResponse(dispatch.PickupStop),
             ToStopResponse(dispatch.DropoffStop),
-            dispatch.Carrier.CompanyName,
-            dispatch.Carrier.CompanyPhone,
-            dispatch.Carrier.CompanyEmail,
             dispatch.Vehicles.Select(x => ToVehicleResponse(x)),
             dispatch.Drivers.Select(dd => ToDriverResponse(dd.Driver)),
             dispatch.CreatedAt);
