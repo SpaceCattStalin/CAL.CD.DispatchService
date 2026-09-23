@@ -6,11 +6,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 namespace Infrastructure.Persistence.Interceptors;
 
 /// <summary>
-/// Sets the Postgres session GUC "app.company_id" on every connection open, so
-/// row-level security policies (e.g. on "dispatches") can read the acting
-/// company via current_setting('app.company_id', true). Must run on every
-/// open (not just the first) because Npgsql pools physical connections and
-/// does not reset session-level GUC state on return to the pool.
+/// Set the row level security for Postgres to constraint fetching only 
+/// dispatches that belong to the user shipper company and the carrier company involve
 /// </summary>
 public class CompanyContextConnectionInterceptor(ICurrentUserService currentUserService) : DbConnectionInterceptor
 {

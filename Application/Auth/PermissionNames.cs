@@ -11,6 +11,7 @@ public static class PermissionNames
     public const string UsersRead = "users:read";
     public const string UsersUpdate = "users:update";
     public const string UsersDelete = "users:delete";
+    public const string DriversRead = "drivers:read";
     public const string CompaniesRead = "companies:read";
     public const string CompaniesUpdate = "companies:update";
 
@@ -26,6 +27,7 @@ public static class PermissionNames
         UsersUpdate,
         UsersDelete,
         CompaniesRead,
-        CompaniesUpdate
+        CompaniesUpdate,
+        DriversRead
     ];
 }
