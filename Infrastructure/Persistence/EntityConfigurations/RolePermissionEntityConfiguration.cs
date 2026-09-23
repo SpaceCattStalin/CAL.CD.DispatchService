@@ -39,6 +39,7 @@ public class RolePermissionEntityConfiguration : IEntityTypeConfiguration<RolePe
             Seed(RbacSeedIds.OwnerRoleId, RbacSeedIds.UsersDeletePermissionId),
             Seed(RbacSeedIds.OwnerRoleId, RbacSeedIds.CompaniesReadPermissionId),
             Seed(RbacSeedIds.OwnerRoleId, RbacSeedIds.CompaniesUpdatePermissionId),
+            Seed(RbacSeedIds.OwnerRoleId, RbacSeedIds.DriversReadPermissionId),
 
             // Admin: dispatches CRUD, users create/read/update, companies read
             Seed(RbacSeedIds.AdminRoleId, RbacSeedIds.DispatchesCreatePermissionId),

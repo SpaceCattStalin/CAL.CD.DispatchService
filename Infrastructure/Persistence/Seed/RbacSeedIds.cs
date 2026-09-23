@@ -19,4 +19,5 @@ internal static class RbacSeedIds
     public static readonly Guid CompaniesReadPermissionId = new("20000000-0000-0000-0000-000000000009");
     public static readonly Guid CompaniesUpdatePermissionId = new("20000000-0000-0000-0000-00000000000a");
     public static readonly Guid DispatchesReadAllPermissionId = new("20000000-0000-0000-0000-00000000000b");
+    public static readonly Guid DriversReadPermissionId = new("20000000-0000-0000-0000-00000000000c");
 }

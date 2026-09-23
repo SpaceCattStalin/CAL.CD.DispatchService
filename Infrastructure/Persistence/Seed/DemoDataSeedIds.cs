@@ -1,8 +1,9 @@
 namespace Infrastructure;
 
 /// <summary>
-/// Seed data for dev/demo purposes: 3 Carrier companies and 2 Shipper companies, each with
-/// one Owner and two Driver users. Password is "Password123!" (same hash as TestUserSeedIds).
+/// Seed data for dev/demo purposes: 3 Carrier companies and 2 Shipper companies. Each company
+/// has one Owner; Carrier companies have five Driver users, Shipper companies have two.
+/// Password is "Password123!" (same hash as TestUserSeedIds).
 /// </summary>
 internal static class DemoDataSeedIds
 {
@@ -17,14 +18,23 @@ internal static class DemoDataSeedIds
     public static readonly Guid ApexCarriersOwnerId = new("51000000-0000-0000-0000-000000000001");
     public static readonly Guid ApexCarriersDriver1Id = new("52000000-0000-0000-0000-000000000001");
     public static readonly Guid ApexCarriersDriver2Id = new("53000000-0000-0000-0000-000000000001");
+    public static readonly Guid ApexCarriersDriver3Id = new("54000000-0000-0000-0000-000000000001");
+    public static readonly Guid ApexCarriersDriver4Id = new("55000000-0000-0000-0000-000000000001");
+    public static readonly Guid ApexCarriersDriver5Id = new("56000000-0000-0000-0000-000000000001");
 
     public static readonly Guid BlueHorizonOwnerId = new("51000000-0000-0000-0000-000000000002");
     public static readonly Guid BlueHorizonDriver1Id = new("52000000-0000-0000-0000-000000000002");
     public static readonly Guid BlueHorizonDriver2Id = new("53000000-0000-0000-0000-000000000002");
+    public static readonly Guid BlueHorizonDriver3Id = new("54000000-0000-0000-0000-000000000002");
+    public static readonly Guid BlueHorizonDriver4Id = new("55000000-0000-0000-0000-000000000002");
+    public static readonly Guid BlueHorizonDriver5Id = new("56000000-0000-0000-0000-000000000002");
 
     public static readonly Guid MidwestFreightOwnerId = new("51000000-0000-0000-0000-000000000003");
     public static readonly Guid MidwestFreightDriver1Id = new("52000000-0000-0000-0000-000000000003");
     public static readonly Guid MidwestFreightDriver2Id = new("53000000-0000-0000-0000-000000000003");
+    public static readonly Guid MidwestFreightDriver3Id = new("54000000-0000-0000-0000-000000000003");
+    public static readonly Guid MidwestFreightDriver4Id = new("55000000-0000-0000-0000-000000000003");
+    public static readonly Guid MidwestFreightDriver5Id = new("56000000-0000-0000-0000-000000000003");
 
     public static readonly Guid GoldenStateOwnerId = new("51000000-0000-0000-0000-000000000004");
     public static readonly Guid GoldenStateDriver1Id = new("52000000-0000-0000-0000-000000000004");

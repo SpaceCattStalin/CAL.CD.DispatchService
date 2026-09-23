@@ -2,8 +2,8 @@ namespace Application.Dispatches;
 
 public class CreateDispatchResponse(
     Guid DispatchId,
-    Guid ShipperId,
-    Guid CarrierId,
+    CompanyResponse? Shipper,
+    CompanyResponse? Carrier,
     string DispatchStatus,
     decimal Price,
     DateTime PickupDate,
@@ -16,8 +16,8 @@ public class CreateDispatchResponse(
     DateTime CreatedAt)
 {
     public Guid DispatchId { get; init; } = DispatchId;
-    public Guid ShipperId { get; init; } = ShipperId;
-    public Guid CarrierId { get; init; } = CarrierId;
+    public CompanyResponse? Shipper { get; init; } = Shipper;
+    public CompanyResponse? Carrier { get; init; } = Carrier;
     public string DispatchStatus { get; init; } = DispatchStatus;
     public decimal Price { get; init; } = Price;
     public DateTime PickupDate { get; init; } = PickupDate;

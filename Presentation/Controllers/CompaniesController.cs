@@ -23,4 +23,12 @@ public class CompaniesController : ControllerBase
         var response = await _companyService.GetCarriersAsync();
         return Ok(response);
     }
+
+    [HttpGet("drivers")]
+    [Authorize(Policy = PermissionNames.DriversRead)]
+    public async Task<IActionResult> GetDrivers()
+    {
+        var response = await _companyService.GetDriversAsync();
+        return Ok(response);
+    }
 }

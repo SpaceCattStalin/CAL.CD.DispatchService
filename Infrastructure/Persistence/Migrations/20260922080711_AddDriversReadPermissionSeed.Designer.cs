@@ -3,6 +3,7 @@ using System;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260922080711_AddDriversReadPermissionSeed")]
+    partial class AddDriversReadPermissionSeed
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -877,51 +880,6 @@ namespace Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            UserId = new Guid("54000000-0000-0000-0000-000000000001"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "b.sutton@apexcarriers.com",
-                            FirstName = "Bradley",
-                            IsActive = true,
-                            LastName = "Sutton",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002016",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "bsutton01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("55000000-0000-0000-0000-000000000001"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "m.grover@apexcarriers.com",
-                            FirstName = "Melissa",
-                            IsActive = true,
-                            LastName = "Grover",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002017",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "mgrover01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("56000000-0000-0000-0000-000000000001"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "w.barton@apexcarriers.com",
-                            FirstName = "Wesley",
-                            IsActive = true,
-                            LastName = "Barton",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002018",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "wbarton01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
                             UserId = new Guid("51000000-0000-0000-0000-000000000002"),
                             CompanyId = new Guid("50000000-0000-0000-0000-000000000002"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -967,51 +925,6 @@ namespace Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            UserId = new Guid("54000000-0000-0000-0000-000000000002"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "r.doyle@bluehorizon.com",
-                            FirstName = "Rachel",
-                            IsActive = true,
-                            LastName = "Doyle",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002019",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "rdoyle01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("55000000-0000-0000-0000-000000000002"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "n.vance@bluehorizon.com",
-                            FirstName = "Nathaniel",
-                            IsActive = true,
-                            LastName = "Vance",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002020",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "nvance01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("56000000-0000-0000-0000-000000000002"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "p.hayes@bluehorizon.com",
-                            FirstName = "Priscilla",
-                            IsActive = true,
-                            LastName = "Hayes",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002021",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "phayes01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
                             UserId = new Guid("51000000-0000-0000-0000-000000000003"),
                             CompanyId = new Guid("50000000-0000-0000-0000-000000000003"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -1053,51 +966,6 @@ namespace Infrastructure.Persistence.Migrations
                             Phone = "5550002009",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             UserName = "imeyer01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("54000000-0000-0000-0000-000000000003"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "g.lambert@midwestfreight.com",
-                            FirstName = "Gregory",
-                            IsActive = true,
-                            LastName = "Lambert",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002022",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "glambert01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("55000000-0000-0000-0000-000000000003"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "v.pruitt@midwestfreight.com",
-                            FirstName = "Vanessa",
-                            IsActive = true,
-                            LastName = "Pruitt",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002023",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "vpruitt01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("56000000-0000-0000-0000-000000000003"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "h.chambers@midwestfreight.com",
-                            FirstName = "Harold",
-                            IsActive = true,
-                            LastName = "Chambers",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002024",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "hchambers01",
                             UserRole = "Driver"
                         },
                         new

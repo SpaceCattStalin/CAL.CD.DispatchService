@@ -1,7 +1,7 @@
 namespace Application.Dispatches;
 
 public class AssignDriverRequest(
-    Guid DriverId)
+    Guid? DriverId)
 {
-    public Guid DriverId { get; init; } = DriverId;
+    public Guid? DriverId { get; init; } = DriverId;
 }

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Application;
 using Application.Auth;
 using Application.Interfaces;
+using Domain;
 
 namespace Presentation.Services;
 
@@ -36,6 +37,18 @@ public class CurrentUserService : ICurrentUserService
                 throw new UnauthorizedAccessException("No authenticated user");
 
             return companyId;
+        }
+    }
+
+    public CompanyType CompanyType
+    {
+        get
+        {
+            var value = _httpContextAccessor.HttpContext?.User.FindFirstValue(CustomClaimTypes.CompanyType);
+            if (!Enum.TryParse(value, out CompanyType type))
+                throw new UnauthorizedAccessException("No authenticated user");
+
+            return type;
         }
     }
 }

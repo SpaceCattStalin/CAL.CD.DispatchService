@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Application.Auth;
 using Application.Interfaces;
+using Domain;
 using Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -43,6 +44,8 @@ public static class AuthConfigurationExtensions
         // Must register an instance (not the type) here: PermissionAuthorizationRequirement's constructor
         // takes params string[] allowedPermissions, which DI can't resolve on its own.
         services.AddSingleton<IAuthorizationHandler>(new PermissionAuthorizationRequirement());
+        services.AddScoped<IAuthorizationHandler, ShipperOnlyHandler>();
+        services.AddScoped<IAuthorizationHandler, CarrierOnlyHandler>();
 
         services.AddAuthorization(options =>
         {
@@ -56,6 +59,18 @@ public static class AuthConfigurationExtensions
                     policy.Requirements.Add(new PermissionAuthorizationRequirement(permission)));
             }
         });
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy("ShipperOnly", policy => policy.AddRequirements(
+            new ShipperOnlyRequirement(CompanyType.Shipper),
+            new PermissionAuthorizationRequirement(PermissionNames.DispatchesUpdate))
+        );
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy("CarrierOnly", policy => policy.AddRequirements(
+            new CarrierOnlyRequirement(CompanyType.Carrier),
+            new PermissionAuthorizationRequirement(PermissionNames.DispatchesUpdate))
+        );
 
         return services;
     }

@@ -148,6 +148,51 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
                 CreatedAt = DemoDataSeedIds.SeedTimestamp,
                 UpdatedAt = DemoDataSeedIds.SeedTimestamp
             },
+            new
+            {
+                UserId = DemoDataSeedIds.ApexCarriersDriver3Id,
+                FirstName = "Bradley",
+                LastName = "Sutton",
+                Phone = "5550002016",
+                Email = "b.sutton@apexcarriers.com",
+                UserName = "bsutton01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.ApexCarriersId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.ApexCarriersDriver4Id,
+                FirstName = "Melissa",
+                LastName = "Grover",
+                Phone = "5550002017",
+                Email = "m.grover@apexcarriers.com",
+                UserName = "mgrover01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.ApexCarriersId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.ApexCarriersDriver5Id,
+                FirstName = "Wesley",
+                LastName = "Barton",
+                Phone = "5550002018",
+                Email = "w.barton@apexcarriers.com",
+                UserName = "wbarton01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.ApexCarriersId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
 
             // Blue Horizon Transport
             new
@@ -195,6 +240,51 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
                 CreatedAt = DemoDataSeedIds.SeedTimestamp,
                 UpdatedAt = DemoDataSeedIds.SeedTimestamp
             },
+            new
+            {
+                UserId = DemoDataSeedIds.BlueHorizonDriver3Id,
+                FirstName = "Rachel",
+                LastName = "Doyle",
+                Phone = "5550002019",
+                Email = "r.doyle@bluehorizon.com",
+                UserName = "rdoyle01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.BlueHorizonId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.BlueHorizonDriver4Id,
+                FirstName = "Nathaniel",
+                LastName = "Vance",
+                Phone = "5550002020",
+                Email = "n.vance@bluehorizon.com",
+                UserName = "nvance01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.BlueHorizonId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.BlueHorizonDriver5Id,
+                FirstName = "Priscilla",
+                LastName = "Hayes",
+                Phone = "5550002021",
+                Email = "p.hayes@bluehorizon.com",
+                UserName = "phayes01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.BlueHorizonId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
 
             // Midwest Freight Solutions
             new
@@ -235,6 +325,51 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<User>
                 Phone = "5550002009",
                 Email = "i.meyer@midwestfreight.com",
                 UserName = "imeyer01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.MidwestFreightId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.MidwestFreightDriver3Id,
+                FirstName = "Gregory",
+                LastName = "Lambert",
+                Phone = "5550002022",
+                Email = "g.lambert@midwestfreight.com",
+                UserName = "glambert01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.MidwestFreightId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.MidwestFreightDriver4Id,
+                FirstName = "Vanessa",
+                LastName = "Pruitt",
+                Phone = "5550002023",
+                Email = "v.pruitt@midwestfreight.com",
+                UserName = "vpruitt01",
+                PasswordHash = TestUserSeedIds.PasswordHash,
+                UserRole = UserRole.Driver,
+                IsActive = true,
+                CompanyId = DemoDataSeedIds.MidwestFreightId,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                UserId = DemoDataSeedIds.MidwestFreightDriver5Id,
+                FirstName = "Harold",
+                LastName = "Chambers",
+                Phone = "5550002024",
+                Email = "h.chambers@midwestfreight.com",
+                UserName = "hchambers01",
                 PasswordHash = TestUserSeedIds.PasswordHash,
                 UserRole = UserRole.Driver,
                 IsActive = true,

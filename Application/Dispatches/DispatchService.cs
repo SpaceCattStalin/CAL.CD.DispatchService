@@ -108,22 +108,28 @@ public class DispatchService
     // ----- Get batch -----
     public async Task<GetDispatchBatchResponse> GetBatchAsync(GetDispatchBatchRequest request)
     {
-        // var result = await _batchValidator.ValidateAsync(request);
-        // if (!result.IsValid)
-        //     throw new ValidationException(result.Errors);
-
         var requestedIds = request.DispatchIds.ToList();
 
-        var dispatches = await _db.Dispatches
+        var query = _db.Dispatches
             .Include(d => d.PickupStop)
             .Include(d => d.DropoffStop)
-            .Include(d => d.Carrier)
-            .Include(d => d.Shipper)
             .Include(d => d.Vehicles).ThenInclude(v => v.PickupStop)
             .Include(d => d.Vehicles).ThenInclude(v => v.DropoffStop)
             .Include(d => d.Drivers).ThenInclude(dd => dd.Driver)
-            .Where(d => requestedIds.Contains(d.DispatchId))
-            .ToListAsync();
+            .Where(d => requestedIds.Contains(d.DispatchId));
+
+        // Check what type of company the current user is 
+        // and return the opposite company type data
+        if (_currentUser.CompanyType == CompanyType.Carrier)
+        {
+            query = query.Include(d => d.Shipper);
+        }
+        else if (_currentUser.CompanyType == CompanyType.Shipper)
+        {
+            query = query.Include(d => d.Carrier);
+        }
+
+        var dispatches = await query.ToListAsync();
 
         var foundIds = dispatches.Select(d => d.DispatchId).ToHashSet();
         var notFound = requestedIds.Where(id => !foundIds.Contains(id));
@@ -181,10 +187,6 @@ public class DispatchService
     // ----- Assign driver -----
     public async Task AssignDriverAsync(Guid dispatchId, AssignDriverRequest request)
     {
-        var result = await _assignDriverValidator.ValidateAsync(request);
-        if (!result.IsValid)
-            throw new ValidationException(result.Errors);
-
         var dispatch = await _db.Dispatches
             .Include(d => d.Drivers)
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
@@ -192,24 +194,37 @@ public class DispatchService
         if (dispatch is null)
             throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
 
-        if (dispatch.CarrierId == Guid.Empty)
-            throw new ArgumentException("Dispatch does not have a carrier assigned.", nameof(dispatchId));
-
         dispatch.UpdateStatus(DispatchStatus.PendingDelivery);
 
-        var driver = await _db.Users.FirstOrDefaultAsync(u => u.UserId == request.DriverId);
-        if (driver is null || !driver.IsActive)
-            throw new ArgumentException("DriverId does not reference an active driver.", nameof(request.DriverId));
-
-        var alreadyAssigned = dispatch.Drivers.Any(dd => dd.DriverId == request.DriverId);
-        if (alreadyAssigned)
-            return;
-
-        dispatch.Drivers.Add(new DispatchDriver
+        if (request.DriverId is null)
         {
-            DispatchId = dispatch.DispatchId,
-            DriverId = driver.UserId
-        });
+            dispatch.Drivers.Clear();
+        }
+        else
+        {
+            var driver = await _db.Users
+                .FirstOrDefaultAsync(
+                    u => u.CompanyId == _currentUser.CompanyId
+                    &&
+                    u.UserRole == UserRole.Driver
+                    &&
+                    u.UserId == request.DriverId);
+
+            if (driver is null || !driver.IsActive)
+                throw new ArgumentException("DriverId does not reference an active driver.", nameof(request.DriverId));
+
+            if (dispatch.Drivers.Any())
+            {
+                dispatch.Drivers.Clear();
+            }
+
+            dispatch.Drivers.Add(new DispatchDriver
+            {
+                DispatchId = dispatch.DispatchId,
+                DriverId = driver.UserId
+            });
+        }
+
         await _db.SaveChangesAsync();
     }
 
@@ -315,6 +330,8 @@ public class DispatchService
         await _eventPublisher.Publish(new DispatchUpdateEvent(
             EventType.Update,
             dispatch.DispatchId,
+            dispatch.ShipperId,
+            dispatch.CarrierId,
             dispatch.Price,
             dispatch.PickupDate,
             dispatch.DropoffDate,
@@ -325,5 +342,32 @@ public class DispatchService
         await _db.SaveChangesAsync();
 
         return DispatchMapper.ToDispatchResponse(dispatch);
+    }
+
+    // ----------- Accept ------------------
+    public async Task AcceptDispatch(Guid dispatchId)
+    {
+        var dispatch = await _db.Dispatches
+            .Include(d => d.Vehicles)
+            .FirstOrDefaultAsync(d => d.DispatchId.Equals(dispatchId));
+
+        if (dispatch is null)
+            throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
+
+        dispatch.UpdateStatus(DispatchStatus.PendingPickup);
+
+        await _eventPublisher.Publish(new DispatchUpdateEvent(
+            EventType.Update,
+            dispatch.DispatchId,
+            dispatch.ShipperId,
+            dispatch.CarrierId,
+            dispatch.Price,
+            dispatch.PickupDate,
+            dispatch.DropoffDate,
+            dispatch.DispatchStatus,
+            dispatch.Vehicles.Select(v => new DispatchUpdateVehicle(v.Vin)),
+            dispatch.CreatedAt));
+
+        await _db.SaveChangesAsync();
     }
 }

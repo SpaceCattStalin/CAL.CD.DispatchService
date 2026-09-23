@@ -27,7 +27,9 @@ public class AuthService
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
 
-        var user = await _db.Users.SingleOrDefaultAsync(u => u.UserName == request.UserName);
+        var user = await _db.Users
+            .Include(u => u.Company)
+            .SingleOrDefaultAsync(u => u.UserName == request.UserName);
         if (user is null || !user.IsActive || !_passwordHasher.Verify(user.PasswordHash, request.Password))
             throw new UnauthorizedAccessException("Invalid credentials");
 
@@ -37,7 +39,10 @@ public class AuthService
             .SingleOrDefaultAsync(r => r.Name == roleName);
 
         var permissions = role.RolePermissions.Select(rp => rp.Permission.Name);
-        var token = _tokenGenerator.GenerateToken(user.UserId, user.UserName, roleName, user.CompanyId, permissions);
+        var token = _tokenGenerator
+            .GenerateToken(user.UserId, user.UserName, user.LastName, user.FirstName, roleName,
+            user.CompanyId, user.Company.CompanyName, user.Company.CompanyType.ToString(),
+            permissions);
 
         return new LoginResponse(token.AccessToken, token.ExpiresAt);
     }

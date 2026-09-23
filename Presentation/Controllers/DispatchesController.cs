@@ -21,7 +21,7 @@ public class DispatchesController : ControllerBase
     public async Task<IActionResult> Create(CreateDispatchRequest request)
     {
         var response = await _dispatchService.CreateAsync(request);
-        
+
         return CreatedAtAction("GetById", new { dispatchId = response.DispatchId }, response);
     }
 
@@ -66,10 +66,18 @@ public class DispatchesController : ControllerBase
     }
 
     [HttpPut("{dispatchId}")]
-    [Authorize(Policy = PermissionNames.DispatchesUpdate)]
+    [Authorize(Policy = "ShipperOnly")]
     public async Task<IActionResult> Update(Guid dispatchId, UpdateDispatchRequest request)
     {
         var response = await _dispatchService.UpdateAsync(dispatchId, request);
         return Ok(response);
+    }
+
+    [HttpPut("{dispatchId}/accept")]
+    [Authorize(Policy = "CarrierOnly")]
+    public async Task<IActionResult> Accept(Guid dispatchId)
+    {
+        await _dispatchService.AcceptDispatch(dispatchId);
+        return NoContent();
     }
 }
