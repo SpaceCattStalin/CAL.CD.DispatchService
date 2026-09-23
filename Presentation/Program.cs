@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using Application;
+using Application.Auth;
 using Application.Dispatches;
+using Domain;
 using Infrastructure;
 using Presentation;
 
@@ -46,6 +48,12 @@ builder.Services.AddControllers()
         options => options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles
     );
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("ShipperOnly", policy => policy.AddRequirements(
+        new ShipperOnlyRequirement(CompanyType.Shipper),
+        new PermissionAuthorizationRequirement(PermissionNames.DispatchesUpdate))
+    );
 
 var app = builder.Build();
 

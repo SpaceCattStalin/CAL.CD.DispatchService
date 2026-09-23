@@ -11,6 +11,7 @@ public interface IApplicationDbContext
     DbSet<Stop> Stops { get; }
     DbSet<Vehicle> Vehicles { get; }
     DbSet<Company> Companies { get; }
+    DbSet<DispatchDriver> DispatchDrivers { get; set; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
