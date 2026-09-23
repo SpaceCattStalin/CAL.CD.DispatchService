@@ -70,11 +70,14 @@ public class DispatchService
         await _eventPublisher.Publish(new DispatchWriterEvent(
             EventType.Create,
             dispatch.DispatchId,
+            dispatch.ShipperId,
+            dispatch.CarrierId,
             dispatch.Price,
             dispatch.PickupDate,
             dispatch.DropoffDate,
             dispatch.DispatchStatus,
-            dispatch.Vehicles.Select(v => new DispatchWriterVehicle(v.Vin))));
+            dispatch.Vehicles.Select(v => new DispatchWriterVehicle(v.Vin)),
+            dispatch.CreatedAt));
 
         _db.Dispatches.Add(dispatch);
         await _db.SaveChangesAsync();
@@ -166,7 +169,8 @@ public class DispatchService
             d.PickupDate,
             d.DropoffDate,
             d.DispatchStatus,
-            d.Vehicles.Select(v => new DispatchWriterVehicle(v.Vin))));
+            d.Vehicles.Select(v => new DispatchWriterVehicle(v.Vin)),
+            d.CreatedAt));
 
         // If there are still dispatch in the database, return the id of the last dispatch to use 
         // as cursor for the next call to this endpoint, if 
@@ -315,7 +319,8 @@ public class DispatchService
             dispatch.PickupDate,
             dispatch.DropoffDate,
             dispatch.DispatchStatus,
-            dispatch.Vehicles.Select(v => new DispatchUpdateVehicle(v.Vin))));
+            dispatch.Vehicles.Select(v => new DispatchUpdateVehicle(v.Vin)),
+            dispatch.CreatedAt));
 
         await _db.SaveChangesAsync();
 

@@ -23,7 +23,8 @@ public class RoleEntityConfiguration : IEntityTypeConfiguration<Role>
         builder.HasData(
             new { RoleId = RbacSeedIds.OwnerRoleId, Name = "Owner", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp },
             new { RoleId = RbacSeedIds.AdminRoleId, Name = "Admin", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp },
-            new { RoleId = RbacSeedIds.DriverRoleId, Name = "Driver", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp }
+            new { RoleId = RbacSeedIds.DriverRoleId, Name = "Driver", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp },
+            new { RoleId = RbacSeedIds.SyncRoleId, Name = "SyncJob", CreatedAt = RbacSeedIds.SeedTimestamp, UpdatedAt = RbacSeedIds.SeedTimestamp }
         );
     }
 }

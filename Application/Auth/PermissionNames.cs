@@ -4,6 +4,7 @@ public static class PermissionNames
 {
     public const string DispatchesCreate = "dispatches:create";
     public const string DispatchesRead = "dispatches:read";
+    public const string DispatchesReadAll = "dispatches:read-all";
     public const string DispatchesUpdate = "dispatches:update";
     public const string DispatchesDelete = "dispatches:delete";
     public const string UsersCreate = "users:create";
@@ -17,6 +18,7 @@ public static class PermissionNames
     [
         DispatchesCreate,
         DispatchesRead,
+        DispatchesReadAll,
         DispatchesUpdate,
         DispatchesDelete,
         UsersCreate,

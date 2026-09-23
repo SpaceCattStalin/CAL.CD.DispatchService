@@ -41,5 +41,58 @@ public class CompanyEntityConfiguration : IEntityTypeConfiguration<Company>
             CreatedAt = TestUserSeedIds.SeedTimestamp,
             UpdatedAt = TestUserSeedIds.SeedTimestamp
         });
+
+        builder.HasData(
+            new
+            {
+                CompanyId = DemoDataSeedIds.ApexCarriersId,
+                CompanyName = "Apex Carriers LLC",
+                CompanyPhone = "5550001001",
+                CompanyEmail = "contact@apexcarriers.com",
+                CompanyType = CompanyType.Carrier,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                CompanyId = DemoDataSeedIds.BlueHorizonId,
+                CompanyName = "Blue Horizon Transport",
+                CompanyPhone = "5550001002",
+                CompanyEmail = "ops@bluehorizon.com",
+                CompanyType = CompanyType.Carrier,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                CompanyId = DemoDataSeedIds.MidwestFreightId,
+                CompanyName = "Midwest Freight Solutions",
+                CompanyPhone = "5550001003",
+                CompanyEmail = "dispatch@midwestfreight.com",
+                CompanyType = CompanyType.Carrier,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                CompanyId = DemoDataSeedIds.GoldenStateId,
+                CompanyName = "Golden State Manufacturing",
+                CompanyPhone = "5550001004",
+                CompanyEmail = "shipping@goldenstate.com",
+                CompanyType = CompanyType.Shipper,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            },
+            new
+            {
+                CompanyId = DemoDataSeedIds.SummitRetailId,
+                CompanyName = "Summit Retail Group",
+                CompanyPhone = "5550001005",
+                CompanyEmail = "logistics@summitretail.com",
+                CompanyType = CompanyType.Shipper,
+                CreatedAt = DemoDataSeedIds.SeedTimestamp,
+                UpdatedAt = DemoDataSeedIds.SeedTimestamp
+            }
+        );
     }
 }

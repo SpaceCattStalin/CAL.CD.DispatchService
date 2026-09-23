@@ -10,6 +10,8 @@ internal static class TestUserSeedIds
 
     public static readonly Guid CompanyId = new("30000000-0000-0000-0000-000000000001");
     public static readonly Guid UserId = new("30000000-0000-0000-0000-000000000002");
-
+    public static readonly Guid CarrierOwnerId = new("30000000-0000-0000-0000-000000000123");
+    public static readonly Guid CarrierDriverId = new("30000000-0000-0000-0000-000000001234");
+    
     public const string PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==";
 }

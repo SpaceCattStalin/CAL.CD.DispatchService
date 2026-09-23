@@ -1,4 +1,5 @@
 using System.Data.Common;
+using Application.Auth;
 using Application.Interfaces;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -40,6 +41,11 @@ public class CompanyContextConnectionInterceptor(ICurrentUserService currentUser
         parameter.ParameterName = "company_id";
         parameter.Value = TryGetCompanyId(out var companyId) ? companyId.ToString() : DBNull.Value;
         command.Parameters.Add(parameter);
+
+        var bypassParam = command.CreateParameter();
+        bypassParam.ParameterName = "is_sync_job";
+        bypassParam.Value = currentUserService.HasPermission(PermissionNames.DispatchesReadAll) ? "true" : "false";
+        command.Parameters.Add(bypassParam);
 
         return command;
     }

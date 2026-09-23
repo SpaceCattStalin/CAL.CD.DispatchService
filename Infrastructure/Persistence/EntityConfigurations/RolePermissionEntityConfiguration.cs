@@ -50,8 +50,9 @@ public class RolePermissionEntityConfiguration : IEntityTypeConfiguration<RolePe
             Seed(RbacSeedIds.AdminRoleId, RbacSeedIds.UsersUpdatePermissionId),
             Seed(RbacSeedIds.AdminRoleId, RbacSeedIds.CompaniesReadPermissionId),
 
-            // Driver: dispatches read only
-            Seed(RbacSeedIds.DriverRoleId, RbacSeedIds.DispatchesReadPermissionId)
+            Seed(RbacSeedIds.DriverRoleId, RbacSeedIds.DispatchesReadPermissionId),
+
+            Seed(RbacSeedIds.SyncRoleId, RbacSeedIds.DispatchesReadAllPermissionId)
         );
     }
 

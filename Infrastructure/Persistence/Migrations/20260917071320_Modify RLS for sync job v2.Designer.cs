@@ -3,6 +3,7 @@ using System;
 using Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917071320_Modify RLS for sync job v2")]
+    partial class ModifyRLSforsyncjobv2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -84,56 +87,6 @@ namespace Infrastructure.Persistence.Migrations
                             CompanyEmail = "contact@testlogistics.com",
                             CompanyName = "Test Logistics Co",
                             CompanyPhone = "1234567890",
-                            CompanyType = "Shipper",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000001"),
-                            CompanyEmail = "contact@apexcarriers.com",
-                            CompanyName = "Apex Carriers LLC",
-                            CompanyPhone = "5550001001",
-                            CompanyType = "Carrier",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000002"),
-                            CompanyEmail = "ops@bluehorizon.com",
-                            CompanyName = "Blue Horizon Transport",
-                            CompanyPhone = "5550001002",
-                            CompanyType = "Carrier",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000003"),
-                            CompanyEmail = "dispatch@midwestfreight.com",
-                            CompanyName = "Midwest Freight Solutions",
-                            CompanyPhone = "5550001003",
-                            CompanyType = "Carrier",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000004"),
-                            CompanyEmail = "shipping@goldenstate.com",
-                            CompanyName = "Golden State Manufacturing",
-                            CompanyPhone = "5550001004",
-                            CompanyType = "Shipper",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000005"),
-                            CompanyEmail = "logistics@summitretail.com",
-                            CompanyName = "Summit Retail Group",
-                            CompanyPhone = "5550001005",
                             CompanyType = "Shipper",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
@@ -773,36 +726,6 @@ namespace Infrastructure.Persistence.Migrations
                         },
                         new
                         {
-                            UserId = new Guid("30000000-0000-0000-0000-000000000123"),
-                            CompanyId = new Guid("dc63068f-dbfc-422c-8464-f47698fd8905"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "owner@testcarriers.com",
-                            FirstName = "Carrier",
-                            IsActive = true,
-                            LastName = "Ownerrrrrr",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "1234567890",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "testcarrier",
-                            UserRole = "Owner"
-                        },
-                        new
-                        {
-                            UserId = new Guid("30000000-0000-0000-0000-000000001234"),
-                            CompanyId = new Guid("dc63068f-dbfc-422c-8464-f47698fd8905"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "owner@testdriverr.com",
-                            FirstName = "Driver",
-                            IsActive = true,
-                            LastName = "Driverrrrrr",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "1234567890",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "testdriver",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
                             UserId = new Guid("90000000-0000-0000-0000-000000000001"),
                             CompanyId = new Guid("30000000-0000-0000-0000-000000000001"),
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -815,231 +738,6 @@ namespace Infrastructure.Persistence.Migrations
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             UserName = "SyncJobbbb",
                             UserRole = "SyncJob"
-                        },
-                        new
-                        {
-                            UserId = new Guid("51000000-0000-0000-0000-000000000001"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "m.alden@apexcarriers.com",
-                            FirstName = "Marcus",
-                            IsActive = true,
-                            LastName = "Alden",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002001",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "malden01",
-                            UserRole = "Owner"
-                        },
-                        new
-                        {
-                            UserId = new Guid("52000000-0000-0000-0000-000000000001"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "d.simmons@apexcarriers.com",
-                            FirstName = "Derek",
-                            IsActive = true,
-                            LastName = "Simmons",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002002",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "dsimmons01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("53000000-0000-0000-0000-000000000001"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "n.coleman@apexcarriers.com",
-                            FirstName = "Nathan",
-                            IsActive = true,
-                            LastName = "Coleman",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002003",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "ncoleman01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("51000000-0000-0000-0000-000000000002"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "r.whitfield@bluehorizon.com",
-                            FirstName = "Renee",
-                            IsActive = true,
-                            LastName = "Whitfield",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002004",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "rwhitfield01",
-                            UserRole = "Owner"
-                        },
-                        new
-                        {
-                            UserId = new Guid("52000000-0000-0000-0000-000000000002"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "o.bennett@bluehorizon.com",
-                            FirstName = "Oscar",
-                            IsActive = true,
-                            LastName = "Bennett",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002005",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "obennett01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("53000000-0000-0000-0000-000000000002"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "m.torres@bluehorizon.com",
-                            FirstName = "Miguel",
-                            IsActive = true,
-                            LastName = "Torres",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002006",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "mtorres01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("51000000-0000-0000-0000-000000000003"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "d.foster@midwestfreight.com",
-                            FirstName = "Diana",
-                            IsActive = true,
-                            LastName = "Foster",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002007",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "dfoster01",
-                            UserRole = "Owner"
-                        },
-                        new
-                        {
-                            UserId = new Guid("52000000-0000-0000-0000-000000000003"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "t.banks@midwestfreight.com",
-                            FirstName = "Trevor",
-                            IsActive = true,
-                            LastName = "Banks",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002008",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "tbanks01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("53000000-0000-0000-0000-000000000003"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "i.meyer@midwestfreight.com",
-                            FirstName = "Isaac",
-                            IsActive = true,
-                            LastName = "Meyer",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002009",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "imeyer01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("51000000-0000-0000-0000-000000000004"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000004"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "s.grant@goldenstate.com",
-                            FirstName = "Sophia",
-                            IsActive = true,
-                            LastName = "Grant",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002010",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "sgrant01",
-                            UserRole = "Owner"
-                        },
-                        new
-                        {
-                            UserId = new Guid("52000000-0000-0000-0000-000000000004"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000004"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "c.reyes@goldenstate.com",
-                            FirstName = "Connor",
-                            IsActive = true,
-                            LastName = "Reyes",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002011",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "creyes01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("53000000-0000-0000-0000-000000000004"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000004"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "j.stanton@goldenstate.com",
-                            FirstName = "Julia",
-                            IsActive = true,
-                            LastName = "Stanton",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002012",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "jstanton01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("51000000-0000-0000-0000-000000000005"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000005"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "v.holloway@summitretail.com",
-                            FirstName = "Victor",
-                            IsActive = true,
-                            LastName = "Holloway",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002013",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "vholloway01",
-                            UserRole = "Owner"
-                        },
-                        new
-                        {
-                            UserId = new Guid("52000000-0000-0000-0000-000000000005"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000005"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "g.pemberton@summitretail.com",
-                            FirstName = "Grace",
-                            IsActive = true,
-                            LastName = "Pemberton",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002014",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "gpemberton01",
-                            UserRole = "Driver"
-                        },
-                        new
-                        {
-                            UserId = new Guid("53000000-0000-0000-0000-000000000005"),
-                            CompanyId = new Guid("50000000-0000-0000-0000-000000000005"),
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "e.ramirez@summitretail.com",
-                            FirstName = "Ethan",
-                            IsActive = true,
-                            LastName = "Ramirez",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBLXzaXNLvzcwr7crtuiu+QvBo1L4LRPzYYijwQASmFIWKWw1/zyh8MKGjf+gyF1jg==",
-                            Phone = "5550002015",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            UserName = "eramirez01",
-                            UserRole = "Driver"
                         });
                 });
 
