@@ -55,14 +55,27 @@ public class DispatchService
                         .Select(u => u.CompanyId)
                         .SingleOrDefaultAsync();
 
+        // Throw error let the error to appear when unit test
+        // Old code before writing unit test
+        // var shipperCompany = await _db.Companies.FirstOrDefaultAsync(c => c.CompanyId.Equals(ownerCompanyId))
+        //     ?? throw new KeyNotFoundException($"Owner company {ownerCompanyId} not found");
+        var shipperCompany = await _db.Companies
+            .FirstOrDefaultAsync(c => c.CompanyId.Equals(ownerCompanyId)
+            && c.CompanyType == CompanyType.Shipper)
+              ?? throw new UnauthorizedAccessException($"Current user with id {_currentUser.UserId} is not an owner");
+
+        // Throw error let the error to appear when unit test
+        var carrierCompany = await _db.Companies
+            .FirstOrDefaultAsync(c => c.CompanyId.Equals(request.CarrierId)
+            && c.CompanyType == CompanyType.Carrier)
+            ?? throw new ValidationException(new[]
+            {
+                new ValidationFailure(nameof(request.CarrierId), $"{request.CarrierId} is not a carrier company")
+            });
 
         var dispatch = DispatchMapper.ToDomain(request, ownerCompanyId);
 
-        var shipperCompany = await _db.Companies.FirstAsync(c => c.CompanyId.Equals(ownerCompanyId));
-
         dispatch.SetShipperCompany(shipperCompany);
-
-        var carrierCompany = await _db.Companies.FirstAsync(c => c.CompanyId.Equals(request.CarrierId));
 
         dispatch.SetCarrierCompany(carrierCompany);
 
@@ -88,6 +101,9 @@ public class DispatchService
     // ----- Get by id -----
     public async Task<DispatchResponse> GetByIdAsync(Guid dispatchId)
     {
+        if (dispatchId == Guid.Empty)
+            throw new ValidationException(new[] { new ValidationFailure(nameof(dispatchId), "The requested id must not be empty") });
+
         var dispatch = await _db.Dispatches
                 .Include(d => d.PickupStop)
                 .Include(d => d.DropoffStop)
@@ -108,7 +124,13 @@ public class DispatchService
     // ----- Get batch -----
     public async Task<GetDispatchBatchResponse> GetBatchAsync(GetDispatchBatchRequest request)
     {
+        var result = await _batchValidator.ValidateAsync(request);
+        if (!result.IsValid)
+            throw new ValidationException(result.Errors);
+
         var requestedIds = request.DispatchIds.ToList();
+        // Before writing unit test, miss the case the the requestedId list is empty. Bad code
+
 
         var query = _db.Dispatches
             .Include(d => d.PickupStop)
@@ -138,20 +160,24 @@ public class DispatchService
             dispatches.Count == 0 ? [] : dispatches.Select(x => DispatchMapper.ToDispatchResponse(x)),
             notFound);
     }
-
+    /// <summary>
+    /// Function used to sync data with OpenSearch. OpenSearch Dispatch only need Vehicles information
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    /// <exception cref="ValidationException"></exception>
     // ----- Get paged -----
     public async Task<PageResponseWithCursor<DispatchWriterDto>> GetPagedAsync(GetDispatchesPagedRequest request)
     {
         var result = await _pagedValidator.ValidateAsync(request);
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
-
+        
         //   - parse request.Cursor as a Guid (treat null/empty as "start from the beginning")
         Guid? cursor = string.IsNullOrEmpty(request.Cursor) ? null : Guid.Parse(request.Cursor);
 
         IQueryable<Dispatch> query = _db.Dispatches.Include(d => d.Vehicles);
 
-        //   - filter: DispatchId > cursor
         if (cursor.HasValue)
             query = query.Where(d => d.DispatchId > cursor.Value);
 
@@ -162,6 +188,9 @@ public class DispatchService
 
         var dispatches = await query.ToListAsync();
 
+        // Check has more to avoid the case where dispatched.Count = 500 and request.Limit = 500. 
+        // Then a second query is sent to the database
+        // This code to avoid that 
         var hasMore = dispatches.Count > request.Limit;
         if (hasMore)
             dispatches.RemoveAt(dispatches.Count - 1);
