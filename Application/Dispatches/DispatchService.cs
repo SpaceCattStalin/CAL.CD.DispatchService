@@ -172,7 +172,7 @@ public class DispatchService
         var result = await _pagedValidator.ValidateAsync(request);
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
-        
+
         //   - parse request.Cursor as a Guid (treat null/empty as "start from the beginning")
         Guid? cursor = string.IsNullOrEmpty(request.Cursor) ? null : Guid.Parse(request.Cursor);
 
@@ -216,8 +216,15 @@ public class DispatchService
     // ----- Assign driver -----
     public async Task AssignDriverAsync(Guid dispatchId, AssignDriverRequest request)
     {
+        if (_currentUser.CompanyType != CompanyType.Carrier)
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(nameof(_currentUser.CompanyType), $"Company of type {_currentUser.CompanyType} can not assign drivers.")
+            });
+
         var dispatch = await _db.Dispatches
             .Include(d => d.Drivers)
+            .Include(d => d.Vehicles)
             .FirstOrDefaultAsync(d => d.DispatchId == dispatchId);
 
         if (dispatch is null)
@@ -293,6 +300,12 @@ public class DispatchService
     // ----- Update -----
     public async Task<DispatchResponse> UpdateAsync(Guid dispatchId, UpdateDispatchRequest request)
     {
+        if (_currentUser.CompanyType != CompanyType.Shipper)
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(nameof(_currentUser.CompanyType), $"Company of type {_currentUser.CompanyType} can not update a dispatch.")
+            });
+
         var result = await _updateValidator.ValidateAsync(request);
         if (!result.IsValid)
             throw new ValidationException(result.Errors);
@@ -376,12 +389,29 @@ public class DispatchService
     // ----------- Accept ------------------
     public async Task AcceptDispatch(Guid dispatchId)
     {
+        if (_currentUser.CompanyType != CompanyType.Carrier)
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(nameof(_currentUser.CompanyType), $"Company of type {_currentUser.CompanyType} can not accept request.")
+            });
+
         var dispatch = await _db.Dispatches
             .Include(d => d.Vehicles)
             .FirstOrDefaultAsync(d => d.DispatchId.Equals(dispatchId));
 
         if (dispatch is null)
             throw new KeyNotFoundException($"Dispatch {dispatchId} not found.");
+
+        if (dispatch.DispatchStatus == DispatchStatus.Canceled
+            || dispatch.DispatchStatus == DispatchStatus.PendingPickup
+            || dispatch.DispatchStatus == DispatchStatus.PendingDelivery
+            || dispatch.DispatchStatus == DispatchStatus.Delivered)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(nameof(Dispatch.DispatchStatus), $"Can not accept a dispatch with status {dispatch.DispatchStatus}.")
+            });
+        }
 
         dispatch.UpdateStatus(DispatchStatus.PendingPickup);
 

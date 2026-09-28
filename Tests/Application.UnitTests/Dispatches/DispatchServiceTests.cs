@@ -36,6 +36,7 @@ public class DispatchServiceTests
     private readonly Mock<IValidator<UpdateDispatchRequest>> mockUpdateValidator = new();
     private readonly Mock<IValidator<GetDispatchesPagedRequest>> mockPagedValidator = new();
     private readonly Mock<ILogger<DispatchService>> mockLogger = new();
+
     private readonly Mock<ICurrentUserService> mockCurrentUser = new();
     private readonly Mock<DbSet<Dispatch>> mockSet = new();
     private readonly Mock<IApplicationDbContext> mockDb = new();
@@ -680,6 +681,29 @@ public class DispatchServiceTests
     }
 
     [Fact]
+    public async Task AssignDriver_ShipperUser_ThrowsValidationException_NothingSaved()
+    {
+        // Arrange
+        using var db = InMemoryDbContextFactory.Create();
+        await db.SeedCompaniesAsync(shipperCompanyId, carrierCompanyId);
+        var seededDispatch = await db.SeedDispatchAsync(shipperCompanyId, carrierCompanyId);
+        var driverId = Guid.NewGuid();
+        await db.SeedUserAsync(driverId, carrierCompanyId, UserRole.Driver);
+        db.ChangeTracker.Clear();
+
+        var service = CreateServiceForShipper(db);
+
+        // Act
+        await Assert.ThrowsAsync<ValidationException>(
+            () => service.AssignDriverAsync(seededDispatch.DispatchId, new AssignDriverRequest(driverId)));
+
+        // Assert
+        var reloaded = await ReloadDispatchAsync(db, seededDispatch.DispatchId);
+        Assert.Equal(DispatchStatus.NotSigned, reloaded.DispatchStatus);
+        Assert.Empty(reloaded.Drivers);
+    }
+
+    [Fact]
     public async Task AssignDriver_UnknownDriverId_ThrowsArgumentException_NothingSaved()
     {
         // Arrange
@@ -746,6 +770,7 @@ public class DispatchServiceTests
         // Assert
         var reloaded = await ReloadDispatchAsync(db, seededDispatch.DispatchId);
         Assert.Equal(DispatchStatus.PendingDelivery, reloaded.DispatchStatus);
+        Assert.All(reloaded.Vehicles, v => Assert.Equal(VehicleStatus.PendingDelivery, v.VehicleStatus));
         var assigned = Assert.Single(reloaded.Drivers);
         Assert.Equal(driverId, assigned.DriverId);
     }
@@ -929,6 +954,30 @@ public class DispatchServiceTests
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdateAsync(Guid.NewGuid(), request));
 
+        mockPublisher.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Update_CarrierUser_ThrowsValidationException_NothingSaved()
+    {
+        // Arrange
+        using var db = InMemoryDbContextFactory.Create();
+        await db.SeedCompaniesAsync(shipperCompanyId, carrierCompanyId);
+        var seededDispatch = await db.SeedDispatchAsync(shipperCompanyId, carrierCompanyId);
+        db.ChangeTracker.Clear();
+
+        var request = MakeUpdateRequest([]);
+        mockUpdateValidator.Setup(v => v.ValidateAsync(request, default)).ReturnsAsync(SuccessfulValidationResult());
+
+        var service = CreateServiceForCarrier(db);
+
+        // Act
+        await Assert.ThrowsAsync<ValidationException>(() => service.UpdateAsync(seededDispatch.DispatchId, request));
+
+        // Assert
+        var reloaded = await ReloadDispatchAsync(db, seededDispatch.DispatchId);
+        Assert.Equal(seededDispatch.Price, reloaded.Price);
+        Assert.Single(reloaded.Vehicles);
         mockPublisher.VerifyNoOtherCalls();
     }
 
@@ -1172,6 +1221,26 @@ public class DispatchServiceTests
     }
 
     [Fact]
+    public async Task Accept_ShipperUser_ThrowsValidationException_NothingSaved()
+    {
+        // Arrange
+        using var db = InMemoryDbContextFactory.Create();
+        await db.SeedCompaniesAsync(shipperCompanyId, carrierCompanyId);
+        var seededDispatch = await db.SeedDispatchAsync(shipperCompanyId, carrierCompanyId);
+        db.ChangeTracker.Clear();
+
+        var service = CreateServiceForShipper(db);
+
+        // Act
+        await Assert.ThrowsAsync<ValidationException>(() => service.AcceptDispatch(seededDispatch.DispatchId));
+
+        // Assert
+        var reloaded = await ReloadDispatchAsync(db, seededDispatch.DispatchId);
+        Assert.Equal(DispatchStatus.NotSigned, reloaded.DispatchStatus);
+        mockPublisher.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task Accept_ValidDispatch_SetsPendingPickupAndPublishesUpdateEvent()
     {
         // Arrange
@@ -1199,5 +1268,28 @@ public class DispatchServiceTests
         Assert.Equal(EventType.Update, publishedEvent.Type);
         Assert.Equal(seededDispatch.DispatchId, publishedEvent.DispatchId);
         Assert.Equal(DispatchStatus.PendingPickup, publishedEvent.DispatchStatus);
+    }
+
+    [Theory]
+    [InlineData(DispatchStatus.Canceled)]
+    [InlineData(DispatchStatus.Delivered)]
+    [InlineData(DispatchStatus.PendingDelivery)]
+    [InlineData(DispatchStatus.PendingPickup)]
+    public async Task Accept_InvalidDispatchStatus_ThrowValidationException(DispatchStatus status)
+    {
+        // Arrange
+        using var db = InMemoryDbContextFactory.Create();
+        await db.SeedCompaniesAsync(shipperCompanyId, carrierCompanyId);
+        var seededDispatch = await db.SeedDispatchAsync(shipperCompanyId, carrierCompanyId, status);
+        db.ChangeTracker.Clear();
+        var service = CreateServiceForCarrier(db);
+
+        // Act
+        await Assert.ThrowsAsync<ValidationException>(() => service.AcceptDispatch(seededDispatch.DispatchId));
+
+        // Assert
+        var reloaded = await ReloadDispatchAsync(db, seededDispatch.DispatchId);
+        Assert.Equal(status, reloaded.DispatchStatus);
+        mockPublisher.VerifyNoOtherCalls();
     }
 }
