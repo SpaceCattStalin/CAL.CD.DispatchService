@@ -11,7 +11,10 @@ namespace Infrastructure.Persistence.Interceptors;
 /// </summary>
 public class CompanyContextConnectionInterceptor(ICurrentUserService currentUserService) : DbConnectionInterceptor
 {
-    private const string SetCompanyIdSql = "SELECT set_config('app.company_id', @company_id, false);";
+    private const string SetCompanyIdSql = """
+        SELECT set_config('app.company_id', @company_id, false), 
+        set_config('app.is_sync_job', @is_sync_job, false);
+        """;
 
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
     {

@@ -76,7 +76,8 @@ public class Dispatch : BaseEntity
             PickupStop = pickupStop,
             DropoffStop = dropoffStop,
             Description = description,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         foreach (var vehicleInput in vehicles)
@@ -156,6 +157,7 @@ public class Dispatch : BaseEntity
         PickupDate = pickupDate;
         DropoffDate = dropoffDate;
         Description = description;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void Cancel()

@@ -53,7 +53,11 @@ public class RolePermissionEntityConfiguration : IEntityTypeConfiguration<RolePe
 
             Seed(RbacSeedIds.DriverRoleId, RbacSeedIds.DispatchesReadPermissionId),
 
-            Seed(RbacSeedIds.SyncRoleId, RbacSeedIds.DispatchesReadAllPermissionId)
+            Seed(RbacSeedIds.SyncRoleId, RbacSeedIds.DispatchesReadAllPermissionId),
+            Seed(RbacSeedIds.SyncRoleId, RbacSeedIds.DispatchesSyncJobUpdatePermissionId),
+            Seed(RbacSeedIds.SyncRoleId, RbacSeedIds.DispatchesCreatePermissionId),
+            Seed(RbacSeedIds.SyncRoleId, RbacSeedIds.DispatchesUpdatePermissionId),
+            Seed(RbacSeedIds.SyncRoleId, RbacSeedIds.DispatchesDeletePermissionId)
         );
     }
 

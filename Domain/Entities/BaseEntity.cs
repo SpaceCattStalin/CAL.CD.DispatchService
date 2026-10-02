@@ -10,5 +10,5 @@ public class BaseEntity
     // Reference: https://codewithmukesh.com/blog/concurrency-control-optimistic-locking-efcore/
     public uint RecordVersion { get; }
     public DateTime CreatedAt { get; init; }
-    public DateTime UpdatedAt { get; private set; }
+    public DateTime UpdatedAt { get; protected set; }
 }

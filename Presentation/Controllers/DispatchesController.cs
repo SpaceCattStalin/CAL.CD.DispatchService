@@ -50,7 +50,7 @@ public class DispatchesController : ControllerBase
     }
 
     [HttpPost("{dispatchId}/assign-driver")]
-    [Authorize(Policy = PermissionNames.DispatchesUpdate)]
+    [Authorize(Policy = "CarrierOnly")]
     public async Task<IActionResult> AssignDriver(Guid dispatchId, AssignDriverRequest request)
     {
         await _dispatchService.AssignDriverAsync(dispatchId, request);

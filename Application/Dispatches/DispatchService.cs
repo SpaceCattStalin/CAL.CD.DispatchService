@@ -224,6 +224,18 @@ public class DispatchService
                 DriverId = driver.UserId
             });
         }
+        
+        await _eventPublisher.Publish(new DispatchUpdateEvent(
+              EventType.Update,
+              dispatch.DispatchId,
+              dispatch.ShipperId,
+              dispatch.CarrierId,
+              dispatch.Price,
+              dispatch.PickupDate,
+              dispatch.DropoffDate,
+              dispatch.DispatchStatus,
+              dispatch.Vehicles.Select(v => new DispatchUpdateVehicle(v.Vin)),
+              dispatch.CreatedAt));
 
         await _db.SaveChangesAsync();
     }
